@@ -93,7 +93,7 @@ saveRDS( ppl, "PPLAddresses_census.rds" )
 setwd( wd )
 npo <- readRDS( "NPOAddresses_census.rds" )
 
-### Split into batches of 500 and prepare .csv files for each batch
+### Split into batches of 500 and prepare batch .csv to pull from in geocoding step
 
 # setting wd 
 wd2 <- '/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/np-density-dashboard/addresses_npo'
@@ -105,7 +105,7 @@ npo <- dplyr::select( npo, ID, Address, City, State, Zip )
 # Splitting address files into files with 500 addresses each
 loops <- ceiling( nrow( npo ) / 500 ) # ceiling function rounds up an integer. so loops has the amount of 500s that fit rounded up.
 
-# loop to extract by addressess in 500 batches
+# loop to extract by addresses in 500 batches
 for( i in 1:loops ){
   filename <- paste0( "AddressNPO", i, ".csv" )
   start.row <- ( ( i-1 )*500+1 )# i starts in 1 and this outputs: 1, 501, 1001, etc.
@@ -156,7 +156,7 @@ ppl <- readRDS( "pplAddresses_census.rds" )
 
 # dir.create( "/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/np-density-dashboard/addresses_ppl" )
 
-### Split into batches of 500 
+### Split into batches of 500 and prepare batch .csv to pull from in geocoding step
 
 # setting wd 
 wd2 <- '/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/np-density-dashboard/addresses_ppl'
@@ -165,7 +165,7 @@ setwd( wd2 )
 # Selecting only essential variables
 ppl <- dplyr::select( ppl, ID, Address, City, State, Zip )
 
-# Spliting address files into files with 500 addresses each
+# Splitting address files into files with 500 addresses each
 loops <- ceiling( nrow( ppl ) / 500 ) # ceiling function rounds up an integer. so loops has the amount of 500s that fit rounded up.
 
 # loop to extract by addresses in 500 batches
