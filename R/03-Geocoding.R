@@ -202,7 +202,7 @@ for ( i in 1:loops ){
   
   write.csv( res, paste0( "Results/Resultsppl", i, ".csv" ), row.names = F )
   
-  end_time <- Sys.time( )# document start times
+  end_time <- Sys.time( )# document end times
   
   print( paste0( "Iteration #", i, " complete" ) ) # print iteration to keep track of loop
   print( end_time - start_time ) # print system time to keep track of iteration progress
