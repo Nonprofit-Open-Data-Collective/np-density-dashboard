@@ -26,7 +26,7 @@ library( tidygeocoder ) # for geocoding addresses using Census API, Google API, 
 
 wd<- ( '/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/np-density-dashboard/' )
 
-wd2 <- paste0(wd,'/Data-Wrangled')
+wd2 <- paste0( wd, '/Data-Wrangled' )
 setwd( wd2 )
 
 # The Census Geocoding Service
@@ -66,11 +66,11 @@ setwd( wd2 )
 # npo input_addresses data
 npo <- readRDS( "NONPROFITS-2014-2021v2.rds" )
 
-npo$input_address <- paste( npo$Address, npo$City, npo$State, npo$Zip, sep = "," )# creating an input_address field to match the geocode dataframes
-npo <- npo[, c( 1, 73, 12:15, 71 )]
+npo$input_address <- paste( npo$Address, npo$City, npo$State, npo$Zip, sep = ", " )# creating an input_address field to match the geocode dataframes
+npo <- npo[ , c( 1, 73, 12:15, 71 ) ]
 npo$ID <- 0
 npo <- unique( npo )
-npo <- npo[order( npo$input_address ), ]
+npo <- npo[ order( npo$input_address ), ]
 npo$ID <- 1:nrow( npo )
 rownames( npo )<- NULL
 
@@ -79,13 +79,13 @@ saveRDS( npo, "NPOAddresses_census.rds" )
 # ppl input_addresses data
 ppl <- readRDS( "PEOPLE-2014-2021v2.rds" )
 
-ppl$input_address <- paste( ppl$Address, ppl$City, ppl$State, ppl$Zip, sep = "," )# creating an input_address field to match the geocode dataframes
+ppl$input_address <- paste( ppl$Address, ppl$City, ppl$State, ppl$Zip, sep = ", " )# creating an input_address field to match the geocode dataframes
 
-ppl <- ppl[, c( 1, 21, 10:13, 19 )]
+ppl <- ppl[ , c( 1, 21, 10:13, 19 ) ]
 ppl$ID <- 0
 ppl <- unique( ppl )
 
-ppl <- ppl[order( ppl$input_address ), ]
+ppl <- ppl[ order( ppl$input_address ), ]
 ppl$ID <- 1:nrow( ppl )
 rownames( ppl )<- NULL
 
@@ -99,7 +99,7 @@ npo <- readRDS( "NPOAddresses_census.rds" )
 ### Split into batches of 500 and prepare batch .csv to pull from in geocoding step
 
 # setting wd 
-wd.npo <- paste0(wd,'/addresses_npo')
+wd.npo <- paste0( wd, '/addresses_npo' )
 setwd( wd.npo )
 
 # Selecting only essential variables
@@ -109,7 +109,7 @@ npo <- dplyr::select( npo, ID, Address, City, State, Zip )
 loops <- ceiling( nrow( npo ) / 500 ) # ceiling function rounds up an integer. so loops has the amount of 500s that fit rounded up.
 
 # loop to extract by addresses in 500 batches
-for( i in 1:loops ){
+for ( i in 1:loops ){
   filename <- paste0( "AddressNPO", i, ".csv" )
   start.row <- ( ( i-1 )*500+1 )# i starts in 1 and this outputs: 1, 501, 1001, etc.
   end.row <- ( 500*i )# this outputs 500, 1000, etc.
@@ -137,21 +137,21 @@ setwd( wd.npo )
 ## Create log file
 
 # producing LOG file
-log <- c("Query_Number", "Start_time", "Time_taken")
-log <- paste(log, collapse=',')
-log.name <- as.character(Sys.time())
-log.name <- gsub(":","-",log.name)
-log.name <- gsub(" ","-",log.name)
-log.name <- paste0("Results/Geocode_Log_",log.name,".txt")
-write(log, file=log.name, append = F)
+log <- c( "Query_Number", "Start_time", "Time_taken" )
+log <- paste( log, collapse = ', ' )
+log.name <- as.character( Sys.time( ) )
+log.name <- gsub( ":", "-", log.name )
+log.name <- gsub( " ", "-", log.name )
+log.name <- paste0( "Results/Geocode_Log_", log.name, ".txt" )
+write( log, file = log.name, append = F )
 
-for( i in 1:5 ){
+for ( i in 1:5 ){
   
   # outputs in console to track progress
-  print(Sys.time() )
+  print( Sys.time( ) )
   start_time <- Sys.time( )# document start times
   
-  res<- tibble( read.csv( paste0( "AddressNPO", i, ".csv" ) ) )%>%
+  res<- tibble( read.csv( paste0( "AddressNPO", i, ".csv" ) ) ) %>%
     geocode( ., street = Address, 
              city = City, 
              state = State,
@@ -161,7 +161,7 @@ for( i in 1:5 ){
              full_results = T ) %>%
     select( id, input_address,
                     match = match_indicator, match_type, 
-                    out_address = matched_address, lat, lon= long, 
+                    out_address = matched_address, lat, lon = long, 
                     tiger_line_id, tiger_line_side = tiger_side, 
                     state_fips, county_fips, 
                     tract_fips = census_tract, block_fips = census_block )
@@ -170,13 +170,13 @@ for( i in 1:5 ){
 
   end_time <- Sys.time( )# document start times
   
-  #writing a line in the log file after query i ends
-  query <- paste0("Batch ", as.character(i) )
-  len <- as.character(end_time - start_time)
-  start_time <- as.character(start_time)
-  log <- c(query, start_time, len)
-  log <- paste(log, collapse=',')
-  write(log, file=log.name, append = T)
+  # writing a line in the log file after query i ends
+  query <- paste0( "Batch ", as.character( i ) )
+  len <- as.character( end_time - start_time )
+  start_time <- as.character( start_time )
+  log <- c( query, start_time, len )
+  log <- paste( log, collapse = ', ' )
+  write( log, file = log.name, append = T )
   
 
   print( paste0( "Batch #", i, " complete" ) ) # print iteration to keep track of loop
@@ -196,7 +196,7 @@ ppl <- readRDS( "pplAddresses_census.rds" )
 ### Split into batches of 500 and prepare batch .csv to pull from in geocoding step
 
 # setting wd 
-wd.ppl <- paste0(wd,'/addresses_ppl')
+wd.ppl <- paste0( wd, '/addresses_ppl' )
 setwd( wd.ppl )
 
 # Selecting only essential variables
@@ -206,7 +206,7 @@ ppl <- dplyr::select( ppl, ID, Address, City, State, Zip )
 loops <- ceiling( nrow( ppl ) / 500 ) # ceiling function rounds up an integer. so loops has the amount of 500s that fit rounded up.
 
 # loop to extract by addresses in 500 batches
-for( i in 1:loops ){
+for ( i in 1:loops ){
   filename <- paste0( "Addressppl", i, ".csv" )
   start.row <- ( ( i-1 )*500+1 )# i starts in 1 and this outputs: 1, 501, 1001, etc.
   end.row <- ( 500*i )# this outputs 500, 1000, etc.
@@ -230,13 +230,13 @@ for( i in 1:loops ){
 # setting wd
 setwd( wd.ppl )
 
-for( i in 1:loops ){
+for ( i in 1:loops ){
   
   # outputs in console to track progress
-  print(Sys.time() )
+  print( Sys.time( ) )
   start_time <- Sys.time( )# document start times
   
-  res<- tibble( read.csv( paste0( "Addressppl", i, ".csv" ) ) )%>%
+  res<- tibble( read.csv( paste0( "Addressppl", i, ".csv" ) ) ) %>%
     geocode( ., street = Address, 
              city = City, 
              state = State,
@@ -255,13 +255,13 @@ for( i in 1:loops ){
   
   end_time <- Sys.time( )# document start times
   
-  #writing a line in the log file after query i ends
-  query <- paste0("Batch ", as.character(i) )
-  len <- as.character(end_time - start_time)
-  start_time <- as.character(start_time)
-  log <- c(query, start_time, len)
-  log <- paste(log, collapse=',')
-  write(log, file=log.name, append = T)
+  # writing a line in the log file after query i ends
+  query <- paste0( "Batch ", as.character( i ) )
+  len <- as.character( end_time - start_time )
+  start_time <- as.character( start_time )
+  log <- c( query, start_time, len )
+  log <- paste( log, collapse = ', ' )
+  write( log, file = log.name, append = T )
   
   
   print( paste0( "Batch #", i, " complete" ) ) # print iteration to keep track of loop
@@ -273,117 +273,117 @@ for( i in 1:loops ){
 ## NPO ##
 
 # setting wd
-wd.res.npo <- paste0(wd, "/addresses_npo/Results")
+wd.res.npo <- paste0( wd, "/addresses_npo/Results" )
 
-setwd(wd.res.npo)
+setwd( wd.res.npo )
 
-#capturing filenames of all elements in dir() that have "ResultsNpo"
-x <- grepl("ResultsNpo", dir()) 
-these <- (dir())[x]
+# capturing filenames of all elements in dir( ) that have "ResultsNpo"
+x <- grepl( "ResultsNpo", dir( ) ) 
+these <- ( dir( ) )[ x ]
 
-#loading first file in the string vector
-npo <- read.csv( these[1], stringsAsFactors=F )
+# loading first file in the string vector
+npo <- read.csv( these[ 1 ], stringsAsFactors = F )
 
-#compiling all Results into one
-for( i in 2:length(these) )
+# compiling all Results into one
+for ( i in 2:length( these ) )
 {
-  d <- read.csv( these[i], stringsAsFactors=F )
+  d <- read.csv( these[ i ], stringsAsFactors = F )
   npo <- bind_rows( npo, d )
 }
 
-#saving compiled geocodes
+# saving compiled geocodes
 saveRDS( npo, "../../../NPOAddresses_censusGEO.rds" )
-setwd(wd)
+setwd( wd )
 
 
 # merge to main NPO address file
 
 # results
-npo <- readRDS("Data/3_GeoCensus/NPOAddresses_censusGEO.rds")
+npo <- readRDS( "Data/3_GeoCensus/NPOAddresses_censusGEO.rds" )
 
-#removind the IDs and pob.
-npo <- npo[,-c(1,3)]
+# removind the IDs and pob.
+npo <- npo[ , -c( 1, 3 ) ]
 
 # main
-npo.main <- readRDS(paste0( wd,"Data-Wrangled/NONPROFITS-2014-2019v2.rds") )
+npo.main <- readRDS( paste0( wd, "Data-Wrangled/NONPROFITS-2014-2019v2.rds" ) )
 
 # join to NPO file
-npo.main <- left_join(npo.main, npo, by = "input_address")
+npo.main <- left_join( npo.main, npo, by = "input_address" )
 
 # Adding a geocode_type variable to all Match cases
 npo.main$geocode_type <- NA
 
 # Adding a value to all Match values yielded in the process
-x <- which(npo.main$match %in% "Match")
-npo.main$geocode_type[x] <- "census"
+x <- which( npo.main$match %in% "Match" )
+npo.main$geocode_type[ x ] <- "census"
 
 # Renaming the lat lon vars to make sure we know they come from the census
 
-x <- which(names(npo.main) %in% "lon") 
-names(npo.main)[x] <- "lon_cen"
+x <- which( names( npo.main ) %in% "lon" ) 
+names( npo.main )[ x ] <- "lon_cen"
 
-x <- which(names(npo.main) %in% "lat") 
-names(npo.main)[x] <- "lat_cen"
+x <- which( names( npo.main ) %in% "lat" ) 
+names( npo.main )[ x ] <- "lat_cen"
 
-x <- which(names(npo.main) %in% "lat_lon") 
-names(npo.main)[x] <- "lat_lon_cen"
+x <- which( names( npo.main ) %in% "lat_lon" ) 
+names( npo.main )[ x ] <- "lat_lon_cen"
 
 # save
-saveRDS(npo.main, paste0(wd,"Data-Wrangled/NONPROFITS-2014-2019v3.rds")  )
+saveRDS( npo.main, paste0( wd, "Data-Wrangled/NONPROFITS-2014-2019v3.rds" )  )
 
 
 ## PPL ##
 
 # setting wd
-wd.res.ppl <- paste0(wd, "/addresses_ppl/Results")
-setwd(wd.res.ppl)
+wd.res.ppl <- paste0( wd, "/addresses_ppl/Results" )
+setwd( wd.res.ppl )
 
-#capturing filenames of all elements in dir() that have "Resultsppl"
-x <- grepl("ResultsPPL", dir()) 
-these <- (dir())[x]
+# capturing filenames of all elements in dir( ) that have "Resultsppl"
+x <- grepl( "ResultsPPL", dir( ) ) 
+these <- ( dir( ) )[ x ]
 
-#loading first file in the string vector
-ppl <- read.csv( these[1], stringsAsFactors=F )
+# loading first file in the string vector
+ppl <- read.csv( these[ 1 ], stringsAsFactors = F )
 
-#compiling all Results into one
-for( i in 2:length(these) )
+# compiling all Results into one
+for ( i in 2:length( these ) )
 {
-  d <- read.csv( these[i], stringsAsFactors=F )
+  d <- read.csv( these[ i ], stringsAsFactors = F )
   ppl <- bind_rows( ppl, d )
 }
 
-#saving compiled geocodes
+# saving compiled geocodes
 saveRDS( ppl, "../../PPLAddresses_censusGEO.rds" )
-setwd(wd)
+setwd( wd )
 
 
 # results
-ppl <- readRDS("Data-Wrangled/3_GeoCensus/PPLAddresses_censusGEO.rds")
-ppl <- ppl[,-c(1,3)]
+ppl <- readRDS( "Data-Wrangled/3_GeoCensus/PPLAddresses_censusGEO.rds" )
+ppl <- ppl[ , -c( 1, 3 ) ]
 
 # main
-ppl.main <- readRDS("Data-Wrangled/PEOPLE-2014-2019v2.rds")
+ppl.main <- readRDS( "Data-Wrangled/PEOPLE-2014-2019v2.rds" )
 
 # join files
-ppl.main <- left_join(ppl.main, ppl, by = "input_address")
+ppl.main <- left_join( ppl.main, ppl, by = "input_address" )
 #### Combining Result Files ####
 
 # Adding a geocode_type variable to all Match results
 ppl.main$geocode_type <- NA
 
 # Adding a value to all Matches yielded in the process
-x <- which(ppl.main$match %in% "Match")
-ppl.main$geocode_type[x] <- "census"
+x <- which( ppl.main$match %in% "Match" )
+ppl.main$geocode_type[ x ] <- "census"
 
 # Renaming the lat lon vars to make sure we know they come from the census
-x <- which(names(ppl.main) %in% "lon") 
-names(ppl.main)[x] <- "lon_cen"
+x <- which( names( ppl.main ) %in% "lon" ) 
+names( ppl.main )[ x ] <- "lon_cen"
 
-x <- which(names(ppl.main) %in% "lat") 
-names(ppl.main)[x] <- "lat_cen"
+x <- which( names( ppl.main ) %in% "lat" ) 
+names( ppl.main )[ x ] <- "lat_cen"
 
-x <- which(names(ppl.main) %in% "lat_lon") 
+x <- which( names( ppl.main ) %in% "lat_lon" ) 
 
 # save 
-saveRDS(ppl.main, "Data-Wrangled/3_GeoCensus/PEOPLE-2014-2019v3.rds")
-names(ppl.main)[x] <- "lat_lon_cen"
+saveRDS( ppl.main, "Data-Wrangled/3_GeoCensus/PEOPLE-2014-2019v3.rds" )
+names( ppl.main )[ x ] <- "lat_lon_cen"

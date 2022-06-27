@@ -12,7 +12,7 @@
 
 library( tidyverse ) 
 library( rio )  # to import xlsx files
-library( gender )  # for estimating gender from data (first names)
+library( gender )  # for estimating gender from data ( first names )
 
 # reference: https://nonprofit-open-data-collective.github.io/open-1023-ez-dataset/Step-01-ProcessRawData.html
 
@@ -33,11 +33,11 @@ df <- lapply( url, function( x )  rio::import( file = x ) )
 # assign elements of list as individual dataframes, names dd1:dd8
 for ( i in 1:length ( url ) ) {
   dds <- paste0( 'dd', 1:length ( url ) )
-  assign( dds[ i ], df[[ i ]] )
+  assign( dds[ i ], df( [ i ] ) )
 }
 
 # now, replicating code provided in: https://nonprofit-open-data-collective.github.io/open-1023-ez-dataset/Step-01-ProcessRawData.html
-setwd('/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/np-density-dashboard/Data-Raw' )
+setwd( '/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/np-density-dashboard/Data-Raw' )
 
 # save raw 2014 dataset
 dd1$EIN <- gsub( "-", "", dd1$EIN )
@@ -105,7 +105,7 @@ identical( dd8$Gamingactyno...103, dd8$Gamingactyno...91 )  # “Gamingactyno”
 
 # Change column names for 2018-2021
 # For binding with the data of previous years, the name of one of the duplicated columns will be set 
-# back to its original name ( removing the column #). We will leave the duplicated variables present in 
+# back to its original name ( removing the column # ). We will leave the duplicated variables present in 
 # 2018 and 2019 data and will rename them with a “.1” at the end.
 colnames( dd5 ) [ 91 ] <- "Gamingactyno"
 colnames( dd5 ) [ 92 ] <- "Gamingactyyes"
@@ -135,9 +135,9 @@ sum( is.na( dat$EIN ) )
 sum( is.na( dat$`Case Number` ) )
 
 # Current dataset has two variables for ORGNAME and they seem to be a single name split into the two vars.
-head( dat[ , c("Orgname1", "Orgname2" ) ], 5 ) 
+head( dat[ , c( "Orgname1", "Orgname2" ) ], 5 ) 
 
-x <- dat[ , c("Orgname1", "Orgname2" ) ] # subsetting only orgnames to compare
+x <- dat[ , c( "Orgname1", "Orgname2" ) ] # subsetting only orgnames to compare
 x <- x[ !is.na( x$Orgname2 ) , ] # removing NAs from Orgname2
 x$Org2len <- nchar( as.character( x$Orgname2 ) )
 x <- x[ order( x$Org2len, decreasing = T ) , ]
@@ -146,13 +146,13 @@ head( x, 10 )
 # Merging Orgname 1 and 2 to create variable ORGNAME
 dat$ORGNAME <- dat$Orgname1
 x <- is.na( dat$Orgname2 ) 
-x <- dat[ !x, c("Orgname1","Orgname2" ) ]
+x <- dat[ !x, c( "Orgname1", "Orgname2" ) ]
 x[ 1:10, ]
 
 
 x <- is.na( dat$Orgname2 ) 
-dat$ORGNAME[ !x ] <- paste0( dat$ORGNAME[ !x ], dat$Orgname2[ !x ])
-x <- dat[ !x,"ORGNAME" ]
+dat$ORGNAME[ !x ] <- paste0( dat$ORGNAME[ !x ], dat$Orgname2[ !x ] )
+x <- dat[ !x, "ORGNAME" ]
 x[ 1:10, ]
 
 
@@ -162,7 +162,7 @@ dat <- unique( dat )
 dat <- as_tibble( dat ) 
 
 # save
-setwd('/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/np-density-dashboard/Data-Wrangled' )
+setwd( '/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/np-density-dashboard/Data-Wrangled' )
 saveRDS( dat, "NONPROFIT-ADDRESSES-2014-2021.rds" ) 
 
 head( dat, 10 )  # Check
@@ -172,8 +172,8 @@ head( dat, 10 )  # Check
 
 # Using the NONPROFIT-ADDRESSES-2014-2019.rds dataset to make a new file with only the NPO data necessary.
 keep.these <- 
-  c( "ORGNAME","ID","Mission",
-     "EIN","Orgname1", "Orgname2",
+  c( "ORGNAME", "ID", "Mission",
+     "EIN", "Orgname1", "Orgname2",
      "Case.Number", "Formrevision", "Eligibilityworksheet", 
      "Address", "City", "State", "Zip", "Zippl4", 
      "Accountingperiodend", "Userfeesubmitted",
@@ -185,7 +185,7 @@ keep.these <-
      "Orgpurposeeducational", "Orgpurposescientific", 
      "Orgpurposeliterary", "Orgpurposepublicsafety", 
      "Orgpurposeamateursports", "Orgpurposecrueltyprevention", 
-     "Qualifyforexemption","Leginflno", "Leginflyes", 
+     "Qualifyforexemption", "Leginflno", "Leginflyes", 
      "Compofcrdirtrustno", "Compofcrdirtrustyes", 
      "Donatefundsno", "Donatefundsyes", "Conductactyoutsideusno", 
      "Conductactyoutsideusyes", "Financialtransofcrsno", 
@@ -222,7 +222,7 @@ id.count <- as.data.frame( table( npo$ID ) )
 id.count <- id.count[ order( id.count$Freq, decreasing = T ) , ]
 id.count$Var1 <- as.character( id.count$Var1 ) 
 rownames( id.count )  <- NULL
-names( id.count )  <- c("ID", "IDdup" ) 
+names( id.count )  <- c( "ID", "IDdup" ) 
 head( id.count )  # some IDs are repeated
 
 
@@ -345,7 +345,7 @@ pander( table( ppl$YR ) )
 # Renaming variables to more friendly names
 names( ppl ) 
 
-x <- c("Firstname", "Lastname", "Title", "Address", "City", "State", "Zip", "Zippl4" ) 
+x <- c( "Firstname", "Lastname", "Title", "Address", "City", "State", "Zip", "Zippl4" ) 
 names( ppl ) [ 6:13 ] <- x
 names( ppl ) 
 
@@ -361,13 +361,13 @@ gender.codes <- gender( first.names )
 gender.codes <- select( gender.codes, name, gender, proportion_male )
 head( gender.codes ) 
 
-ppl <- left_join( ppl, gender.codes, by = c("Firstname" = "name" ) )
+ppl <- left_join( ppl, gender.codes, by = c( "Firstname" = "name" ) )
 
-x <- round( prop.table( table( ppl$gender, useNA ="ifany" )), 2 ) 
+x <- round( prop.table( table( ppl$gender, useNA = "ifany" ) ), 2 ) 
 table( x )
 
 # ordering variables
-nmz <- c("ID",
+nmz <- c( "ID",
          "ORGNAME",
          "EIN",
          "YR",
@@ -391,7 +391,7 @@ id.count <- id.count[ order( id.count$Freq, decreasing = T ) , ]
 head( id.count )  # some IDs are repeated
 
 # making key variable =
-names( id.count )  <- c("ID", "IDdup" ) 
+names( id.count )  <- c( "ID", "IDdup" ) 
 id.count$ID <- as.character( id.count$ID ) 
 
 # joining count
@@ -416,6 +416,6 @@ ppl <- ppl[ , c( 1, 18, 2:17 ) ]
 
 ppl <- as_tibble( ppl ) 
 
-setwd('/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/np-density-dashboard/Data-Wrangled' )
+setwd( '/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/np-density-dashboard/Data-Wrangled' )
 
 saveRDS( ppl, "PEOPLE-2014-2021.rds" )
