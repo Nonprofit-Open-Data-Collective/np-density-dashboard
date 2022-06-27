@@ -24,8 +24,11 @@
 library( tidyverse )
 library( tidygeocoder ) # for geocoding addresses using Census API, Google API, etc.
 
-wd<- ( '/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/np-density-dashboard/Data-Wrangled' )
-setwd( wd )
+wd<- ( '/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/np-density-dashboard/' )
+
+wd2 <- paste0(wd,'/Data-Wrangled')
+setwd( wd2 )
+
 # The Census Geocoding Service
 
 # DOCUMENTATION: https://www.census.gov/programs-surveys/geography.html
@@ -90,14 +93,14 @@ saveRDS( ppl, "PPLAddresses_census.rds" )
 
 
 # read in npo data
-setwd( wd )
+setwd( wd2 )
 npo <- readRDS( "NPOAddresses_census.rds" )
 
 ### Split into batches of 500 and prepare batch .csv to pull from in geocoding step
 
 # setting wd 
-wd2 <- '/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/np-density-dashboard/addresses_npo'
-setwd( wd2 )
+wd.npo <- paste0(wd,'/addresses_npo')
+setwd( wd.npo )
 
 # Selecting only essential variables
 npo <- dplyr::select( npo, ID, Address, City, State, Zip )
@@ -121,7 +124,7 @@ for( i in 1:loops ){
   print( paste( "End Row:", end.row ) )
 } # end of loop.
 
-setwd( wd2 )
+setwd( wd.npo )
 
 ## Geocode the addresses
 
@@ -129,7 +132,7 @@ setwd( wd2 )
 # dir.create( "~Results" )
 
 # setting wd
-setwd( wd2 )
+setwd( wd.npo )
 
 ## Create log file
 
@@ -193,8 +196,8 @@ ppl <- readRDS( "pplAddresses_census.rds" )
 ### Split into batches of 500 and prepare batch .csv to pull from in geocoding step
 
 # setting wd 
-wd2 <- '/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/np-density-dashboard/addresses_ppl'
-setwd( wd2 )
+wd.ppl <- paste0(wd,'/addresses_ppl')
+setwd( wd.ppl )
 
 # Selecting only essential variables
 ppl <- dplyr::select( ppl, ID, Address, City, State, Zip )
@@ -225,7 +228,7 @@ for( i in 1:loops ){
 # dir.create( "Results" )
 
 # setting wd
-setwd( wd2 )
+setwd( wd.ppl )
 
 for( i in 1:loops ){
   
@@ -262,6 +265,125 @@ for( i in 1:loops ){
   
   
   print( paste0( "Batch #", i, " complete" ) ) # print iteration to keep track of loop
-  
+}
 
+
+### Combining Results ###
+
+## NPO ##
+
+# setting wd
+wd.res.npo <- paste0(wd, "/addresses_npo/Results")
+
+setwd(wd.res.npo)
+
+#capturing filenames of all elements in dir() that have "ResultsNpo"
+x <- grepl("ResultsNpo", dir()) 
+these <- (dir())[x]
+
+#loading first file in the string vector
+npo <- read.csv( these[1], stringsAsFactors=F )
+
+#compiling all Results into one
+for( i in 2:length(these) )
+{
+  d <- read.csv( these[i], stringsAsFactors=F )
+  npo <- bind_rows( npo, d )
+}
+
+#saving compiled geocodes
+saveRDS( npo, "../../../NPOAddresses_censusGEO.rds" )
+setwd(wd)
+
+
+# merge to main NPO address file
+
+# results
+npo <- readRDS("Data/3_GeoCensus/NPOAddresses_censusGEO.rds")
+
+#removind the IDs and pob.
+npo <- npo[,-c(1,3)]
+
+# main
+npo.main <- readRDS(paste0( wd,"Data-Wrangled/NONPROFITS-2014-2019v2.rds") )
+
+# join to NPO file
+npo.main <- left_join(npo.main, npo, by = "input_address")
+
+# Adding a geocode_type variable to all Match cases
+npo.main$geocode_type <- NA
+
+# Adding a value to all Match values yielded in the process
+x <- which(npo.main$match %in% "Match")
+npo.main$geocode_type[x] <- "census"
+
+# Renaming the lat lon vars to make sure we know they come from the census
+
+x <- which(names(npo.main) %in% "lon") 
+names(npo.main)[x] <- "lon_cen"
+
+x <- which(names(npo.main) %in% "lat") 
+names(npo.main)[x] <- "lat_cen"
+
+x <- which(names(npo.main) %in% "lat_lon") 
+names(npo.main)[x] <- "lat_lon_cen"
+
+# save
+saveRDS(npo.main, paste0(wd,"Data-Wrangled/NONPROFITS-2014-2019v3.rds")  )
+
+
+## PPL ##
+
+# setting wd
+wd.res.ppl <- paste0(wd, "/addresses_ppl/Results")
+setwd(wd.res.ppl)
+
+#capturing filenames of all elements in dir() that have "Resultsppl"
+x <- grepl("ResultsPPL", dir()) 
+these <- (dir())[x]
+
+#loading first file in the string vector
+ppl <- read.csv( these[1], stringsAsFactors=F )
+
+#compiling all Results into one
+for( i in 2:length(these) )
+{
+  d <- read.csv( these[i], stringsAsFactors=F )
+  ppl <- bind_rows( ppl, d )
+}
+
+#saving compiled geocodes
+saveRDS( ppl, "../../PPLAddresses_censusGEO.rds" )
+setwd(wd)
+
+
+# results
+ppl <- readRDS("Data-Wrangled/3_GeoCensus/PPLAddresses_censusGEO.rds")
+ppl <- ppl[,-c(1,3)]
+
+# main
+ppl.main <- readRDS("Data-Wrangled/PEOPLE-2014-2019v2.rds")
+
+# join files
+ppl.main <- left_join(ppl.main, ppl, by = "input_address")
 #### Combining Result Files ####
+
+# Adding a geocode_type variable to all Match results
+ppl.main$geocode_type <- NA
+
+# Adding a value to all Matches yielded in the process
+x <- which(ppl.main$match %in% "Match")
+ppl.main$geocode_type[x] <- "census"
+
+# Renaming the lat lon vars to make sure we know they come from the census
+x <- which(names(ppl.main) %in% "lon") 
+names(ppl.main)[x] <- "lon_cen"
+
+x <- which(names(ppl.main) %in% "lat") 
+names(ppl.main)[x] <- "lat_cen"
+
+x <- which(names(ppl.main) %in% "lat_lon") 
+
+# save 
+saveRDS(ppl.main, "Data-Wrangled/3_GeoCensus/PEOPLE-2014-2019v3.rds")
+names(ppl.main)[x] <- "lat_lon_cen"
