@@ -131,19 +131,53 @@ setwd( wd2 )
 # setting wd
 setwd( wd2 )
 
-for( i in 1:loops ){
+## Create log file
+
+# producing LOG file
+log <- c("Query_Number", "Start_time", "Time_taken")
+log <- paste(log, collapse=',')
+log.name <- as.character(Sys.time())
+log.name <- gsub(":","-",log.name)
+log.name <- gsub(" ","-",log.name)
+log.name <- paste0("Results/Geocode_Log_",log.name,".txt")
+write(log, file=log.name, append = F)
+
+for( i in 1:5 ){
   
+  # outputs in console to track progress
+  print(Sys.time() )
   start_time <- Sys.time( )# document start times
   
   res<- tibble( read.csv( paste0( "AddressNPO", i, ".csv" ) ) )%>%
-    geocode( ., street = Address, city = City, state = State, postalcode = Zip, method = 'census', full_results = T )
+    geocode( ., street = Address, 
+             city = City, 
+             state = State,
+             postalcode = Zip, 
+             method = 'census',
+             return_type = "geographies",
+             full_results = T ) %>%
+    select( id, input_address,
+                    match = match_indicator, match_type, 
+                    out_address = matched_address, lat, lon= long, 
+                    tiger_line_id, tiger_line_side = tiger_side, 
+                    state_fips, county_fips, 
+                    tract_fips = census_tract, block_fips = census_block )
   
   write.csv( res, paste0( "Results/ResultsNPO", i, ".csv" ), row.names = F )
 
   end_time <- Sys.time( )# document start times
+  
+  #writing a line in the log file after query i ends
+  query <- paste0("Batch ", as.character(i) )
+  len <- as.character(end_time - start_time)
+  start_time <- as.character(start_time)
+  log <- c(query, start_time, len)
+  log <- paste(log, collapse=',')
+  write(log, file=log.name, append = T)
+  
 
-  print( paste0( "Iteration #", i, " complete" ) ) # print iteration to keep track of loop
-  print( end_time - start_time ) # print system time to keep track of iteration progress
+  print( paste0( "Batch #", i, " complete" ) ) # print iteration to keep track of loop
+
 }
 
 
@@ -193,20 +227,41 @@ for( i in 1:loops ){
 # setting wd
 setwd( wd2 )
 
-for ( i in 1:loops ){
+for( i in 1:loops ){
   
+  # outputs in console to track progress
+  print(Sys.time() )
   start_time <- Sys.time( )# document start times
   
   res<- tibble( read.csv( paste0( "Addressppl", i, ".csv" ) ) )%>%
-    geocode( ., street = Address, city = City, state = State, postalcode = Zip, method = 'census', full_results = T )
+    geocode( ., street = Address, 
+             city = City, 
+             state = State,
+             postalcode = Zip, 
+             method = 'census',
+             return_type = "geographies",
+             full_results = T ) %>%
+    select( id, input_address,
+            match = match_indicator, match_type, 
+            out_address = matched_address, lat, lon = long, 
+            tiger_line_id, tiger_line_side = tiger_side, 
+            state_fips, county_fips, 
+            tract_fips = census_tract, block_fips = census_block )
   
-  write.csv( res, paste0( "Results/Resultsppl", i, ".csv" ), row.names = F )
+  write.csv( res, paste0( "Results/ResultsPPL", i, ".csv" ), row.names = F )
   
-  end_time <- Sys.time( )# document end times
+  end_time <- Sys.time( )# document start times
   
-  print( paste0( "Iteration #", i, " complete" ) ) # print iteration to keep track of loop
-  print( end_time - start_time ) # print system time to keep track of iteration progress
-}
-
+  #writing a line in the log file after query i ends
+  query <- paste0("Batch ", as.character(i) )
+  len <- as.character(end_time - start_time)
+  start_time <- as.character(start_time)
+  log <- c(query, start_time, len)
+  log <- paste(log, collapse=',')
+  write(log, file=log.name, append = T)
+  
+  
+  print( paste0( "Batch #", i, " complete" ) ) # print iteration to keep track of loop
+  
 
 #### Combining Result Files ####

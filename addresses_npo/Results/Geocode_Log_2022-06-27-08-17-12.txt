@@ -1,0 +1,2 @@
+Query_Number,Start_time,Time_taken
+Batch 1,2022-06-27 08:17:16,8.6079421043396
