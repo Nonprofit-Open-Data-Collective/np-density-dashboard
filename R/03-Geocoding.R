@@ -24,10 +24,16 @@
 library( tidyverse )
 library( tidygeocoder ) # for geocoding addresses using Census API, Google API, etc.
 
+# repository folder
 wd<- ( '/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/np-density-dashboard/' )
 
-wd2 <- paste0( wd, '/Data-Wrangled' )
+# folder outside of repository to store large files
+lf <- '/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/Large-Files-Bank'
+
+
+wd2 <- paste0( wd, 'Data-Wrangled' )
 setwd( wd2 )
+
 
 # The Census Geocoding Service
 
@@ -99,7 +105,7 @@ npo <- readRDS( "NPOAddresses_census.rds" )
 ### Split into batches of 500 and prepare batch .csv to pull from in geocoding step
 
 # setting wd 
-wd.npo <- paste0( wd, '/addresses_npo' )
+wd.npo <- paste0( lf, '/addresses_npo' )
 setwd( wd.npo )
 
 # Selecting only essential variables
@@ -145,7 +151,7 @@ log.name <- gsub( " ", "-", log.name )
 log.name <- paste0( "Results/Geocode_Log_", log.name, ".txt" )
 write( log, file = log.name, append = F )
 
-for ( i in 1:5 ){
+for ( i in 1:loops ){
   
   # outputs in console to track progress
   print( Sys.time( ) )
@@ -188,7 +194,7 @@ for ( i in 1:5 ){
 #### Now repeat the same set of steps for the boardmembers dataset ####
 
 # read in ppl data
-setwd( wd )
+setwd( wd2 )
 ppl <- readRDS( "pplAddresses_census.rds" )
 
 # dir.create( "/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/np-density-dashboard/addresses_ppl" )
@@ -196,7 +202,7 @@ ppl <- readRDS( "pplAddresses_census.rds" )
 ### Split into batches of 500 and prepare batch .csv to pull from in geocoding step
 
 # setting wd 
-wd.ppl <- paste0( wd, '/addresses_ppl' )
+wd.ppl <- paste0( lf, '/addresses_ppl' )
 setwd( wd.ppl )
 
 # Selecting only essential variables
@@ -273,39 +279,41 @@ for ( i in 1:loops ){
 ## NPO ##
 
 # setting wd
-wd.res.npo <- paste0( wd, "/addresses_npo/Results" )
+wd.res.npo <- paste0( lf, "/addresses_npo/Results" )
 
 setwd( wd.res.npo )
 
 # capturing filenames of all elements in dir( ) that have "ResultsNpo"
-x <- grepl( "ResultsNpo", dir( ) ) 
+x <- grepl( "ResultsNPO", dir( ) ) 
 these <- ( dir( ) )[ x ]
 
 # loading first file in the string vector
 npo <- read.csv( these[ 1 ], stringsAsFactors = F )
 
 # compiling all Results into one
-for ( i in 2:length( these ) )
-{
+for ( i in 2:length( these ) ){
   d <- read.csv( these[ i ], stringsAsFactors = F )
   npo <- bind_rows( npo, d )
 }
 
+
 # saving compiled geocodes
-saveRDS( npo, "../../../NPOAddresses_censusGEO.rds" )
-setwd( wd )
+setwd( lf )
+saveRDS( npo, "NPOAddresses_censusGEO.rds" )
+
 
 
 # merge to main NPO address file
 
 # results
-npo <- readRDS( "Data/3_GeoCensus/NPOAddresses_censusGEO.rds" )
+npo <- readRDS( "NPOAddresses_censusGEO.rds" )
 
-# removind the IDs and pob.
-npo <- npo[ , -c( 1, 3 ) ]
+# removing the IDs 
+npo <- npo[ , -c( 1 ) ]
 
 # main
-npo.main <- readRDS( paste0( wd, "Data-Wrangled/NONPROFITS-2014-2019v2.rds" ) )
+setwd( wd2 )
+npo.main <- readRDS( "NONPROFITS-2014-2021v2.rds" ) 
 
 # join to NPO file
 npo.main <- left_join( npo.main, npo, by = "input_address" )
@@ -329,40 +337,41 @@ x <- which( names( npo.main ) %in% "lat_lon" )
 names( npo.main )[ x ] <- "lat_lon_cen"
 
 # save
-saveRDS( npo.main, paste0( wd, "Data-Wrangled/NONPROFITS-2014-2019v3.rds" )  )
+setwd( lf )
+saveRDS( npo.main, "NONPROFITS-2014-2021v3.rds" )  
 
 
 ## PPL ##
 
 # setting wd
-wd.res.ppl <- paste0( wd, "/addresses_ppl/Results" )
+wd.res.ppl <- paste0( lf, "/addresses_ppl/Results" )
 setwd( wd.res.ppl )
 
 # capturing filenames of all elements in dir( ) that have "Resultsppl"
-x <- grepl( "ResultsPPL", dir( ) ) 
+x <- grepl( "Resultsppl", dir( ) ) 
 these <- ( dir( ) )[ x ]
 
 # loading first file in the string vector
 ppl <- read.csv( these[ 1 ], stringsAsFactors = F )
 
 # compiling all Results into one
-for ( i in 2:length( these ) )
-{
+for ( i in 2:length( these ) ){
   d <- read.csv( these[ i ], stringsAsFactors = F )
   ppl <- bind_rows( ppl, d )
 }
 
 # saving compiled geocodes
-saveRDS( ppl, "../../PPLAddresses_censusGEO.rds" )
-setwd( wd )
+setwd( lf )
+saveRDS( ppl, "PPLAddresses_censusGEO.rds" )
 
 
 # results
-ppl <- readRDS( "Data-Wrangled/3_GeoCensus/PPLAddresses_censusGEO.rds" )
-ppl <- ppl[ , -c( 1, 3 ) ]
+ppl <- readRDS( "PPLAddresses_censusGEO.rds" )
+ppl <- ppl[ , -c( 1 ) ]
 
 # main
-ppl.main <- readRDS( "Data-Wrangled/PEOPLE-2014-2019v2.rds" )
+setwd( wd2 )
+ppl.main <- readRDS( "PEOPLE-2014-2021v2.rds" )
 
 # join files
 ppl.main <- left_join( ppl.main, ppl, by = "input_address" )
@@ -385,5 +394,126 @@ names( ppl.main )[ x ] <- "lat_cen"
 x <- which( names( ppl.main ) %in% "lat_lon" ) 
 
 # save 
-saveRDS( ppl.main, "Data-Wrangled/3_GeoCensus/PEOPLE-2014-2019v3.rds" )
+setwd ( lf )
+saveRDS( ppl.main, "PEOPLE-2014-2019v3.rds" )
 names( ppl.main )[ x ] <- "lat_lon_cen"
+
+
+############# EXPLORING DATA ############# 
+
+## PPl (board members) ##
+
+# read in file if necessary
+# ppl.main <- readRDS("Data/3_GeoCensus/PEOPLE-2014-2019v3.rds")
+
+# plotting data
+plot( ppl.main$lon_cen, ppl.main$lat_cen, pch=19, cex=0.5, col=gray(0.5,0.01))
+
+
+#Summary
+x <- table(ppl.main$match, useNA = "always")
+y <- prop.table(table(ppl.main$match, useNA = "always"))
+
+summary <- as.data.frame(t(rbind(x,y)))
+colnames(summary) <- c("frequency", "percent")
+summary$percent <- summary$percent*100
+summary[nrow(summary)+1,] <- c(sum(summary$frequency), 100)
+rownames(summary)[nrow(summary)] <- "TOTAL"
+summary
+
+# percentage of pob's
+x <- round(prop.table(table(ppl.main$pob, useNA = "ifany"))*100,1)
+names(x) <- c("Non-POB", "POB")
+x
+
+x <- which(ppl.main$pob == 0)
+ppl.main1 <- ppl.main[x,]
+
+#Summary of geocoding process excluding POBs:
+x <- table(ppl.main1$match, useNA = "always")
+y <- prop.table(table(ppl.main1$match, useNA = "always"))
+
+summary <- as.data.frame(t(rbind(x,y)))
+colnames(summary) <- c("frequency", "percent")
+summary$percent <- summary$percent*100
+summary[nrow(summary)+1,] <- c(sum(summary$frequency), 100)
+rownames(summary)[nrow(summary)] <- "TOTAL"
+summary
+
+
+#Summary of geocoding process for only POBs:
+  
+  x <- which(ppl.main$pob == 1)
+ppl.main2 <- ppl.main[x,]
+
+#Summary
+x <- table(ppl.main2$match, useNA = "always")
+y <- prop.table(table(ppl.main2$match, useNA = "always"))
+
+summary <- as.data.frame(t(rbind(x,y)))
+colnames(summary) <- c("frequency", "percent")
+summary$percent <- summary$percent*100
+summary[nrow(summary)+1,] <- c(sum(summary$frequency), 100)
+rownames(summary)[nrow(summary)] <- "TOTAL"
+summary
+
+
+
+## NPO (Organizations) ##
+
+# uploading the file in case needed
+# npo.main <- readRDS("Data/3_GeoCensus/NONPROFITS-2014-2019v3.rds") 
+
+plot( npo.main$lon_cen, npo.main$lat_cen, pch=19, cex=0.5, col=gray(0.5,0.01))
+
+
+#Summary of geocode (all):
+#There are 263272 NPO listed. with 256527 unique addresses
+#Summary
+x <- table(npo.main$match, useNA = "always")
+y <- prop.table(table(npo.main$match, useNA = "always"))
+
+summary <- as.data.frame(t(rbind(x,y)))
+colnames(summary) <- c("frequency", "percent")
+summary$percent <- summary$percent*100
+summary[nrow(summary)+1,] <- c(sum(summary$frequency), 100)
+rownames(summary)[nrow(summary)] <- "TOTAL"
+summary
+
+#The following percentages of POBs
+x <- round(prop.table(table(npo.main$pob, useNA = "ifany"))*100,1)
+names(x) <- c("Non-POB", "POB")
+x
+
+#Summary of geocode excluding POBs:
+  
+  x <- which(npo.main$pob == 0)
+npo.main1 <- npo.main[x,]
+
+#Summary
+x <- table(npo.main1$match, useNA = "always")
+y <- prop.table(table(npo.main1$match, useNA = "always"))
+
+summary <- as.data.frame(t(rbind(x,y)))
+colnames(summary) <- c("frequency", "percent")
+summary$percent <- summary$percent*100
+summary[nrow(summary)+1,] <- c(sum(summary$frequency), 100)
+rownames(summary)[nrow(summary)] <- "TOTAL"
+summary
+
+
+#Summary of geocode for only POBs:
+  
+x <- which(npo.main$pob == 1)
+npo.main2 <- npo.main[x,]
+
+#Summary
+x <- table(npo.main2$match, useNA = "always")
+y <- prop.table(table(npo.main2$match, useNA = "always"))
+
+summary <- as.data.frame(t(rbind(x,y)))
+colnames(summary) <- c("frequency", "percent")
+summary$percent <- summary$percent*100
+summary[nrow(summary)+1,] <- c(sum(summary$frequency), 100)
+rownames(summary)[nrow(summary)] <- "TOTAL"
+summary
