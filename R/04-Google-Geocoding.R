@@ -166,7 +166,7 @@ npo.left <- readRDS( "LO-NPO-addresses-google.rds" )
 
 # 1. selecting the 40 after to test geocode
 
-api <- "AIzaSyDNlDdCy63sfdb9LvPyd3gx4icC32-KEQo" # reading my personal API key from a local file
+api <- insert.here # reading my personal API key from a local file
 
 register_google(key = api) #The register_google function stores the API key.
 getOption("ggmap") #summarises the Google credentials to check how you are connected.
