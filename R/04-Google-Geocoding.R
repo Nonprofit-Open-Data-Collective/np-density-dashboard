@@ -172,34 +172,42 @@ register_google(key = api) #The register_google function stores the API key.
 getOption("ggmap") #summarises the Google credentials to check how you are connected.
 dat <- mutate_geocode(npo.left, input_address, output = "latlona", source = "google", messaging = T) #generates an object where the original dataset is binded with the geocode results.
 
-saveRDS(dat, "DemoResults.rds")
-dat
+#dir.create("Results")
+saveRDS(dat, "Results/npo1res.rds") # change the name of the file accordingly
 
 
 
-#### Geocoding NPO Leftover Addresses
 
-# setting wd
+#### Geocoding PPL Leftover Addresses
+# start with NPO addresses that require only 25274 queries
+setwd( wd2 )
 
-setwd(wd2)
+ppl.left <- readRDS( "LO-PPL-addresses-google.rds" )
 
-# Loading addresses to geocode
-npo <- readRDS("NPOAddresses_google.rds")
+ppl.left.1 <- ppl.left[1:40000,]
+# 1. selecting 40000 for first pass through the geocoder
 
-# We need to split the address file into two batches
-npo1 <- npo[1:40000,]
-npo2 <- npo[40001:nrow(npo)]
+api <- "insert.here" # reading my personal API key from a local file
 
-# The following code chunk will run the first batch npo1:
-  
-  # loading API 
-  api <- readLines("../../../google1.api")
-
-# Geocoding through google. This will generate an object where the priginal dataset is binded with the geocode results.
 register_google(key = api) #The register_google function stores the API key.
 getOption("ggmap") #summarises the Google credentials to check how you are connected.
-npo1.res <- mutate_geocode(npo1, input_address, output = "latlona", source = "google", messaging = T) 
+dat.ppl <- mutate_geocode(ppl.left.1, input_address, output = "latlona", source = "google", messaging = T) #generates an object where the original dataset is binded with the geocode results.
 
-#saving results 
-saveRDS(npo1.res, "Results/npo1res.rds") # change the name of the file accordingly
+#dir.create("Results")
+saveRDS(dat.ppl, "Results/ppl1res.rds") # change the name of the file accordingly
+
+# 1. selecting remaining cases for second pass through the geocoder
+ppl.left.2 <- ppl.left[40001:nrow(ppl.left),] #34544 left to pass through the geocoder
+
+
+api <- "insert.here" # reading my personal API key from a local file
+
+register_google(key = api) #The register_google function stores the API key.
+getOption("ggmap") #summarises the Google credentials to check how you are connected.
+dat.ppl.2 <- mutate_geocode(ppl.left.2, input_address, output = "latlona", source = "google", messaging = T) #generates an object where the original dataset is binded with the geocode results.
+
+saveRDS(dat.ppl.2, "Results/ppl2res.rds") # change the name of the file accordingly
+
+
+
 
