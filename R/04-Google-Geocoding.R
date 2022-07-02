@@ -208,6 +208,198 @@ dat.ppl.2 <- mutate_geocode(ppl.left.2, input_address, output = "latlona", sourc
 
 saveRDS(dat.ppl.2, "Results/ppl2res.rds") # change the name of the file accordingly
 
+# Combine all files with Ignacios to round out dataset
+
+setwd( wd2 )
+
+dat.ppl.2 <- readRDS( "Results/ppl2res.rds" ) 
+dat.ppl.2 <- dat.ppl.2[,-c(1,2)]
+names(dat.ppl.2) <- c("input_address", "lon_ggl", "lat_ggl", "address_ggl")
+
+dat.ppl.1 <- readRDS( "Results/ppl1res.rds" ) 
+dat.ppl.1 <- dat.ppl.1[,-c(1,2)]
+names(dat.ppl.1) <- c("input_address", "lon_ggl", "lat_ggl", "address_ggl")
+
+
+dat.npo.1 <- readRDS( "Results/npo1res.rds" ) 
+dat.npo.1 <- dat.npo.1[,-c(1,2)]
+names(dat.npo.1) <- c("input_address", "lon_ggl", "lat_ggl", "address_ggl")
+
+
+# Ignacio data
+setwd(paste0(wd,"/4_GeoGoogle/Results"))
+#### NPO Addresses ####
+# loading results file
+npo.res <- readRDS("NPOAddresses_googleGEO.rds")
+npo.res <- npo.res[,-c(1,2)]
+names(npo.res) <- c("input_address", "lon_ggl", "lat_ggl", "address_ggl")
+
+
+#### PPL Addresses ####
+# Loading addresses to geocode
+
+# loading results file
+ppl.res <- readRDS("PPLAddresses_googleGEO.rds")
+ppl.res <- ppl.res[,-c(1,2)]
+names(ppl.res) <- c("input_address", "lon_ggl", "lat_ggl", "address_ggl")
+
+
+ppl.out <- bind_rows( ppl.res, dat.ppl.1, dat.ppl.2 )
+npo.out <- bind_rows( npo.res, dat.npo.1 )
+
+## PPL SAVE ##
+# loading mains
+ppl.main <- readRDS("PEOPLE-2014-2021v3.rds")
+ppl.main <- left_join(ppl.main, ppl.out, by = "input_address")
+#Adding a geocode_type variable to all Addresses geocoded by google
+x <- which(!is.na(ppl.main$address_ggl))
+ppl.main$geocode_type[x] <- "google"
+saveRDS(ppl.main, "PEOPLE-2014-2021v4.rds")
+
+## NPO SAVE ##
+# loading mains
+npo.main <- readRDS("NONPROFITS-2014-2021v3.rds")
+npo.main <- left_join(npo.main, npo.out, by = "input_address")
+#Adding a geocode_type variable to all Addresses geocoded by google
+x <- which(!is.na(npo.main$address_ggl))
+npo.main$geocode_type[x] <- "google"
+saveRDS(npo.main, "NONPROFITS-2014-2021v4.rds")
 
 
 
+### EXPLORE DATA ###
+
+## NPO's ##
+
+x <- table(npo.main$geocode_type, useNA = "always")
+y <- prop.table(table(npo.main$geocode_type, useNA = "always"))
+
+summary <- as.data.frame(t(rbind(x,y)))
+colnames(summary) <- c("frequency", "percent")
+summary$percent <- summary$percent*100
+summary[nrow(summary)+1,] <- c(sum(summary$frequency), 100)
+rownames(summary)[nrow(summary)] <- "TOTAL"
+summary
+
+# frequency   percent
+# census    259181  68.96432
+# google     64141  17.06699
+# NA.        52497  13.96869
+# TOTAL     375819 100.00000
+
+x <- round(prop.table(table(npo.main$pob, useNA = "ifany"))*100,1)
+names(x) <- c("Non-POB", "POB")
+x
+# Non-POB     POB 
+# 88.8        11.2 
+
+# Summary of geocoding process excluding POBs:
+  
+x <- which(npo.main$pob == 0)
+npo.main1 <- npo.main[x,]
+
+# Summary
+x <- table(npo.main1$geocode_type, useNA = "always")
+y <- prop.table(table(npo.main1$geocode_type, useNA = "always"))
+
+summary <- as.data.frame(t(rbind(x,y)))
+colnames(summary) <- c("frequency", "percent")
+summary$percent <- summary$percent*100
+summary[nrow(summary)+1,] <- c(sum(summary$frequency), 100)
+rownames(summary)[nrow(summary)] <- "TOTAL"
+summary
+
+# frequency    percent
+# census    257702  77.223800
+# google     64141  19.220696
+# NA.        11865   3.555504
+# TOTAL     333708 100.000000
+
+# Summary of geocoding process for only POBs:
+  
+x <- which(npo.main$pob == 1)
+npo.main2 <- npo.main[x,]
+
+#Summary
+x <- table(npo.main2$geocode_type, useNA = "always")
+y <- prop.table(table(npo.main2$geocode_type, useNA = "always"))
+
+summary <- as.data.frame(t(rbind(x,y)))
+colnames(summary) <- c("frequency", "percent")
+summary$percent <- summary$percent*100
+summary[nrow(summary)+1,] <- c(sum(summary$frequency), 100)
+rownames(summary)[nrow(summary)] <- "TOTAL"
+summary
+
+# frequency    percent
+# census      1479   3.512146
+# NA.        40632  96.487854
+# TOTAL      42111 100.000000
+
+
+## PPL ##
+
+#Summary
+x <- table(ppl.main$geocode_type, useNA = "always")
+y <- prop.table(table(ppl.main$geocode_type, useNA = "always"))
+
+summary <- as.data.frame(t(rbind(x,y)))
+colnames(summary) <- c("frequency", "percent")
+summary$percent <- summary$percent*100
+summary[nrow(summary)+1,] <- c(sum(summary$frequency), 100)
+rownames(summary)[nrow(summary)] <- "TOTAL"
+summary
+
+# frequency    percent
+# census    954305  72.049283
+# google    247585  18.692474
+# NA.       122627   9.258243
+# TOTAL    1324517 100.000000
+
+
+#The following numbers of POBs
+
+x <- round(prop.table(table(ppl.main$pob, useNA = "ifany"))*100,1)
+names(x) <- c("Non-POB", "POB")
+x
+
+# Non-POB     POB 
+# 94.6     5.4 
+
+#Summary of geocoding process excluding POBs:
+  
+x <- which(ppl.main$pob == 0)
+ppl.main1 <- ppl.main[x,]
+
+#Summary
+x <- table(ppl.main1$geocode_type, useNA = "always")
+y <- prop.table(table(ppl.main1$geocode_type, useNA = "always"))
+
+summary <- as.data.frame(t(rbind(x,y)))
+colnames(summary) <- c("frequency", "percent")
+summary$percent <- summary$percent*100
+summary[nrow(summary)+1,] <- c(sum(summary$frequency), 100)
+rownames(summary)[nrow(summary)] <- "TOTAL"
+summary
+
+
+#Summary of geocoding process for only POBs:
+  
+x <- which(ppl.main$pob == 1)
+ppl.main2 <- ppl.main[x,]
+
+#Summary
+x <- table(ppl.main2$geocode_type, useNA = "always")
+y <- prop.table(table(ppl.main2$geocode_type, useNA = "always"))
+
+summary <- as.data.frame(t(rbind(x,y)))
+colnames(summary) <- c("frequency", "percent")
+summary$percent <- summary$percent*100
+summary[nrow(summary)+1,] <- c(sum(summary$frequency), 100)
+rownames(summary)[nrow(summary)] <- "TOTAL"
+summary
+
+# frequency    percent
+# census      2031   2.824599
+# NA.        69873  97.175401
+# TOTAL      71904 100.000000
