@@ -16,7 +16,8 @@
 
 library( tidyverse )
 
-
+########## %notIn% operator #########
+`%notin%` <- Negate(`%in%`)
 
 lf <- "/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/Large-Files-Bank/"
 
@@ -181,7 +182,7 @@ x
 # 2. Getting Board Member Census Data for board members
 # 2.1 Subsetting data
 
-Loading file
+# Loading file
 setwd( lf )
 ppl <- readRDS("PEOPLE-2014-2021v5.rds")
 
@@ -213,14 +214,177 @@ ppl.ipums1GEO <- read.csv("6_CensusData/PPL-ipums1GEO.csv", stringsAsFactors = F
 ppl.ipums2GEO <- read.csv("6_CensusData/PPL-ipums2GEO.csv", stringsAsFactors = F, row.names = NULL)
 ppl.ipums3GEO <- read.csv("6_CensusData/PPL-ipums3GEO.csv", stringsAsFactors = F, row.names = NULL)
 ppl.ipums4GEO <- read.csv("6_CensusData/PPL-ipums4GEO.csv", stringsAsFactors = F, row.names = NULL)
-ppl.ipums5GEO <- read.csv("6_CensusData/PPL-ipums3GEO.csv", stringsAsFactors = F, row.names = NULL)
-ppl.ipums6GEO <- read.csv("6_CensusData/PPL-ipums4GEO.csv", stringsAsFactors = F, row.names = NULL)
+ppl.ipums5GEO <- read.csv("6_CensusData/PPL-ipums5GEO.csv", stringsAsFactors = F, row.names = NULL)
+ppl.ipums6GEO <- read.csv("6_CensusData/PPL-ipums6GEO.csv", stringsAsFactors = F, row.names = NULL)
 
 # binding all
-ppl.ipumsGEO <- rbind(ppl.ipums1GEO, ppl.ipums2GEO, ppl.ipums3GEO, ppl.ipums4GEO)
+ppl.ipumsGEO <- rbind( ppl.ipums1GEO, ppl.ipums2GEO, ppl.ipums3GEO, ppl.ipums4GEO,
+                      ppl.ipums5GEO, ppl.ipums6GEO )
 
 # writting a compiled results rds
-write.csv(ppl.ipumsGEO, "Data/6_CensusData/PPL-ipumsGEO.csv", row.names = FALSE)
+write.csv( ppl.ipumsGEO, "6_CensusData/PPL-ipumsGEO.csv", row.names = FALSE )
+
+# ppl.ipumsGEO <- read.csv("Data/6_CensusData/PPL-ipumsGEO.csv", row.names = NULL, stringsAsFactors = F)
+
+# input file
+x <- ppl.ipums$key
+length(x)
+
+length(unique(x))
+
+# results from IPUMS
+x <- ppl.ipumsGEO$key
+length(x)
+length(unique(x)) # 11 duplicates
+
+# identifying the duplicate IDs
+x <- ppl.ipumsGEO$key
+ppl.dup <- ppl.ipumsGEO$key[which(duplicated(x))]
+
+# subsetting the duplicated values to take a look
+x <- which(ppl.ipumsGEO$key %in% ppl.dup)
+ppl.dat <- ppl.ipumsGEO[x,]
+ppl.dat
+
+# subsetting the duplicated values to take a look
+x <- which(ppl.ipums$key %in% ppl.dup)
+dup <- ppl.ipums[x,]
 
 
-write.csv( ppl.ipums4, "Data/6_CensusData/PPL-ipums4.csv", row.names=F )nrow(ppl.ipums)
+#subsetting the duplicate addresses
+x <- which(ppl$key %in% ppl.dup)
+dup <- ppl[x,]
+dup <- select(dup, key, input_address)
+
+# using google geocoding service to get the lat lons.
+library( ggmap )
+api <- "AIzaSyCjEs0y-pgqTaVcsI_cCbtH5LjWkzZoDzw" # reading my personal API key from a local file
+
+register_google(key = api) #The register_google function stores the API key.
+getOption("ggmap") #summarises the Google credentials to check how you are connected.
+dup <- mutate_geocode(dup, input_address, output = "latlona", source = "google", messaging = T) #generates an object where the original dataset is binded with the geocode results.
+
+setwd( paste0( lf, "6_CensusData/" ) )
+dir.create("dups")
+setwd( paste0( lf, "6_CensusData/dups" ) )
+saveRDS(dup, "GoogleResults1.rds")
+
+# formatting the new lat/lons for submitting to the Geomaker
+dup <- dup[,c(1,3,4)]
+write.csv(dup, "PPLdup-ggl-latlon.csv", row.names = F)
+
+dupGEO <- read.csv("PPLdup-ggl-latlonGEO.csv", row.names = NULL, stringsAsFactors = F)
+
+left_join(dupGEO, ppl[c('key', 'input_address')])%>%
+  select(key, TRACTA, input_address)
+# all duplicates are in Madera county with duplicate tract #'s: 300 and 202
+# Using Ignacio's previous documentation, we confirm that they are all in tract 300
+# so we remove those with TRACTA==202
+
+x <- which(dupGEO$TRACTA == 202)
+dupGEO <- dupGEO[-x,]
+
+setwd( paste0( lf, "6_CensusData/dups" ) )
+
+write.csv(dupGEO, "PPLdup-ggl-latlonGEOfinal.csv", row.names = F)
+
+
+# removing lat lons
+ppl.ipumsGEO <- ppl.ipumsGEO[,-c(2,3)]%>%
+  ppl.ipumsGEO%>%
+  filter(!(key %in% dupGEO$key & TRACTA==202 ) )# fix duplicates by removing redundant rows
+
+x <- ppl.ipumsGEO$key
+length(x)
+length(unique(x)) # no more duplicates
+
+# Changing the names of the variables using the Data Dictionary - from the GM codebook
+
+# Geographic Unit Identifiers:
+#   GISJOIN: GIS Join Match Code
+#   STATE: State Name
+#   STATEA: State Code
+#   COUNTY: County Name
+#   COUNTYA: County Code
+#   TRACTA: Census Tract Code
+
+# Contextual variables: (Your file will include only those variables you requested)
+#   GM001_2017: Proportion unemployed
+#   GM002_2017: Proportion population in poverty
+#   GM003_2017: Median household income
+#   GM004_2017: Income inequality
+#   GM005_2017: Proportion family households headed by single woman
+#   GM006_2017: Proportion occupied housing units that are owner occupied
+#   GM007_2017: Proportion African American
+#   GM008_2017: Proportion of adults who completed high school
+#   GM009_2017: Persons per square kilometer
+#   GM010_2017: Housing units per square kilometer
+
+ppl.ipumsGEO <- rename( ppl.ipumsGEO, 
+                        STATEFIPS = STATEA, 
+                        COUNTYFIPS = COUNTYA,
+                        TRACTFIPS = TRACTA,
+                        unemp = GM001_2019,
+                        poverty = GM002_2019,
+                        medinc = GM003_2019, 
+                        inequality = GM004_2019, 
+                        single=GM005_2019, 
+                        ownerocc = GM006_2019, 
+                        black = GM007_2019, 
+                        hs = GM008_2019, 
+                        p.density = GM009_2019, 
+                        h.density = GM010_2019 )
+  
+# merging
+ppl.cen <- left_join(ppl, ppl.ipumsGEO, by = "key")
+
+#Finally, we add the the google geocode information we got for the 7 duplicated cases and update their geocode_type from census to google.
+
+# google geo results
+ggl.ppl <- readRDS("GoogleResults1.rds")
+names(ggl.ppl)
+
+# identifying the cases to edit
+x <- which(ppl.cen$key %in% ggl.ppl$key)
+
+# test to check the reference is OK
+ppl.cen$key[x] == ggl.ppl$key
+
+ppl.cen[x,c(2,34,35,36)]
+ppl.cen[x,c(34,35,36)] <- ggl.ppl[,-c(1,2)]
+
+# making "google" as geocode_type and updating the final lat lons with the google geocodes.
+ppl.cen$geocode_type[x] <- "google"
+ppl.cen$lat[x] <- ppl.cen$lat_ggl[x]
+ppl.cen$lon[x] <- ppl.cen$lon_ggl[x]
+
+setwd( paste0( lf ) )
+
+saveRDS(ppl.cen, "PEOPLE-2014-2021v6.rds")
+
+#2.5 Exploring the amount of cases with Census data
+
+#Cases with census data
+
+x <- is.na(ppl.cen$poverty) %>% table()
+x <- as.data.frame(x)
+x <- cbind(x, paste0(round(prop.table(x$Freq) * 100,1),"%"))
+names(x) <- c("No Census data", "Freq", "%")
+(x)
+
+x <- table(ppl.cen$geocode_type, useNA = "ifany")
+x <- as.data.frame(x)
+x <- cbind(x, paste0(round(prop.table(x$Freq) * 100,1),"%"))
+names(x) <- c("geocode_type", "Freq", "%")
+x <- x[c(3,1,4,5,2,6),]
+row.names(x) <- NULL
+(x)
+
+
+#Cases with final latitude/longitude
+
+x <- table(is.na(ppl.cen$lat), useNA = "ifany")
+x <- as.data.frame(x)
+x <- cbind(x, paste0(round(prop.table(x$Freq) * 100,1),"%"))
+names(x) <- c("No lat/lon", "Freq", "%")
+x
