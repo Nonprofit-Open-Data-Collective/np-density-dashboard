@@ -258,7 +258,7 @@ dup <- select(dup, key, input_address)
 
 # using google geocoding service to get the lat lons.
 library( ggmap )
-api <- "AIzaSyCjEs0y-pgqTaVcsI_cCbtH5LjWkzZoDzw" # reading my personal API key from a local file
+api <- "insert.here" # reading my personal API key from a local file
 
 register_google(key = api) #The register_google function stores the API key.
 getOption("ggmap") #summarises the Google credentials to check how you are connected.
