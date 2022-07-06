@@ -3,6 +3,7 @@ library( urbnmapr )
 library( sf )
 library( fipio )
 library( tigris )
+library( tidycensus )
 options( tigris_class = "sf" )
 options( tigris_use_cache = TRUE )
 
@@ -21,7 +22,7 @@ np <- np %>%
 trim.sf <- np[ which( is.na( np$COUNTYFIPS ) & is.na( np$lat ) == F & is.na( np$lon ) == F ), c( 'lat','lon','key' ) ]
 
 s <- list( )
-for ( i in 1:475 ) {
+for ( i in 1:nrow( trim.sf ) ) {
   fips_c <- coords_to_fips( x = trim.sf$lon[i], y = trim.sf$lat[i] )
   s[[i]] <- data.frame( f = ifelse( length( fips_c ) == 0, NA, fips_c ),
                         key = trim.sf$key[i] )
