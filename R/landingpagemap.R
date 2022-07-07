@@ -1,5 +1,6 @@
 np <- readRDS( "NONPROFITS-2014-2021v6.rds" )
-
+library(tidyverse)
+library(fipio)
 
 np<-np%>%
   mutate(COUNTYFIPS=ifelse(str_count( COUNTYFIPS, '\\d' )==1, paste0('00', COUNTYFIPS),
@@ -49,20 +50,19 @@ n.ct <- as.data.frame( np.sf %>%
 library(tidycensus)
 census_api_key("eeaa303439c03596e636a76abb061c86cb315032", install =TRUE,
                overwrite=TRUE)
-
+readRenviron("~/.Renviron")
 pop.ct <- as.data.frame( get_acs(geography = "county", 
                                  variables = c( pop = "B07401_001" ), 
                                  year = 2020)%>%
                            select(fips_ct=GEOID, estimate) )
-
 
 ## merge
 n.pop.merge <- pop.ct%>%
   mutate(fips_ct = as.numeric( fips_ct ) )%>%
   left_join(n.ct, .) %>%
   mutate( dens = n / estimate) %>%
-  filter ( is.na( dens )==F)%>%
-  mutate( dens.q = factor(quant.cut( var = 'dens', x = 5 ,df=n.pop.merge ) ) )
+  filter ( is.na( dens )==F) %>%
+  mutate( dens.q = factor(quant.cut( var = 'dens', x = 5 ,df=. ) ) )
 
 
 ct <- st_transform( urbnmapr::get_urbn_map( map = "counties", sf = TRUE ), crs='NAD83' ) %>%
