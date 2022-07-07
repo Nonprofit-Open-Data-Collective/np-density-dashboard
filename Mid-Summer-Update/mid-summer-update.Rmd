@@ -450,7 +450,7 @@ n.ct <- as.data.frame( np.sf %>%
 
 # county population 
 
-invisible( census_api_key( "eeaa303439c03596e636a76abb061c86cb315032", install = TRUE,
+invisible( census_api_key( "apigoeshere", install = TRUE,
                overwrite = TRUE ) )
 invisible( readRenviron( "~/.Renviron" ) )
 

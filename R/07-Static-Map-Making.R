@@ -9,6 +9,8 @@ options( tigris_use_cache = TRUE )
 
 lf <- "/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/Large-Files-Bank"
 
+
+# import data and standardize FIPS codes
 setwd( lf )
 np <- readRDS( "NONPROFITS-2014-2021v6.rds" )
 np <- np %>%
@@ -18,8 +20,9 @@ np <- np %>%
           fips_ct = ifelse( is.na( STATEFIPS ) == F & is.na( COUNTYFIPS ) == F, paste0( STATEFIPS, COUNTYFIPS ),NA ) )
 
 
-# obtain FIPS for those still missing FIPS code but having coordinates present                         
-trim.sf <- np[ which( is.na( np$COUNTYFIPS ) & is.na( np$lat ) == F & is.na( np$lon ) == F ), c( 'lat','lon','key' ) ]
+# obtain FIPS using `fipio package` for those still missing FIPS codes but having coordinates present                         
+trim.sf <- np[ which( is.na( np$COUNTYFIPS ) & is.na( np$lat ) == F & is.na( np$lon ) == F ), 
+               c( 'lat','lon','key' ) ]
 
 s <- list( )
 for ( i in 1:nrow( trim.sf ) ) {
@@ -41,12 +44,13 @@ np.sf <- np %>%
   filter( is.na( lat ) == F ) %>% # st_as_sf does not allow missing values in coordinate columns; n = 167 missing
   st_as_sf( coords = c( "lon", "lat" ), crs = "NAD83" )
 
-# obtain state geometries
+# obtain county geometries
 states.sf <- get_urbn_map( map = "counties", sf = TRUE )
 
-invisible( st_crs( states.sf ) )
+st_crs( states.sf ) 
 st_crs( states.sf ) <- st_crs( states.sf )
-# Remove AK, HI from state and PR and GU from npos as well
+
+# Remove PR and GU from npos as well
 np   <- np  [ !( np$State      %in% c( 'PR', 'GU' ) ), ] # exclude Puerto Rico and Guam
 
 ggplot( ) +
@@ -57,16 +61,17 @@ ggplot( ) +
         title = "",
         caption = '' ) + 
   theme_bw( )
+# we have coordinates in questionable places
 
-
-# Constrain lat long coordinates to diagnose the issue
+# Constrain lat long coordinates to diagnose the issue and identify those points
 np %>%
   filter( lat > 50 & State != "AK" ) %>%
   select( State, City, input_address )
 
-# there are mispecified addresses that linger in the data
+# there are mispecified addresses that linger in the data--will need to manually update data
 
-## remove points manually beyond latitude/longitude confines of lower 48
+
+## remove points manually beyond latitude/longitude confines of lower 48 and plot
 np.sf.o <- np %>%
   filter( lat < 50 & lat > 24 & lon < ( -66 )  & lon > ( -125 ) ) %>%
   st_as_sf( coords = c( "lon", "lat" ), crs = "NAD83" )
@@ -82,13 +87,15 @@ ggplot( ) +
   theme_bw( )
 
 
+
+
 ## Maps of MSA's
 
 # Seattle-Bellevue as an example
 
 wa <- tracts( "WA", cb = TRUE ) # Washington shapefiles
 
-cb <- core_based_statistical_areas( cb = TRUE ) # fetches cartographic boundary files for MSA
+cb <- core_based_statistical_areas( cb = TRUE ) # fetches cartographic boundary files for MSAs
 sea <- filter( cb, grepl( "Seattle", NAME ) ) # match "Seattle" and return boundary files
 
 p1 <- wa[ sea, ] # subset tracts from within ( or touching ) MSA boundary
@@ -96,9 +103,10 @@ p1 <- wa[ sea, ] # subset tracts from within ( or touching ) MSA boundary
 ggplot( ) + 
   geom_sf( data = p1 ) + 
   geom_sf( data = sea, fill = NA, color = "red" ) + # red lines show cartographic boundaries of MSA
-  theme_minimal( )
+  theme_minimal( ) 
+# we have census tracts at the boundaries of the MSA that need to be removed
 
-
+# remove them
 s <- st_within( wa, sea ) # spatial overlay
 
 these <- map_lgl( s, function( x ) {
@@ -109,6 +117,7 @@ these <- map_lgl( s, function( x ) {
   }
 } )
 
+# final subset and plot
 d <- wa[ these, ]
 ggplot( ) + 
   geom_sf( data = d ) +
@@ -226,9 +235,9 @@ n.ct <- as.data.frame( np.sf %>%
 # county population 
 library( tidycensus )
 
-invisible( census_api_key( "eeaa303439c03596e636a76abb061c86cb315032", install = TRUE,
-                           overwrite = TRUE ) )
-invisible( readRenviron( "~/.Renviron" ) )
+##invisible( census_api_key( "apigoeshere", install = TRUE,
+##                         overwrite = TRUE ) )
+##invisible( readRenviron( "~/.Renviron" ) )
 
 pop.ct <- as.data.frame( get_acs( geography = "county", 
                                   variables = c( pop = "B07401_001" ), 
