@@ -40,7 +40,7 @@ these <- map_lgl( s, function( x ) {
   }
 } )
 
-# final subset and basic plot
+# final subset and basic plot of Seattle Bellevue MSA
 d <- wa[ these, ]
 ggplot()+
   geom_sf( data = d ) + 

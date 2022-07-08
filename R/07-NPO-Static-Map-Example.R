@@ -52,7 +52,7 @@ np <- readRDS( "NONPROFITS-2014-2021v6.rds" ) %>%
                                                       TRACTFIPS ) ) ) ),
           GEOID = ifelse( is.na( STATEFIPS ) == F & is.na( COUNTYFIPS ) == F & is.na( TRACTFIPS ) == F,
                           paste0( STATEFIPS, COUNTYFIPS, TRACTFIPS ), NA ) ) %>%
-  select( -c( tract_fips, state_fips, county_fips ) )
+  select( -c( tract_fips, state_fips, county_fips ) ) # remove redundant, unstandardized columns
           
   
 
@@ -82,9 +82,11 @@ trim.sf <- np[ which( is.na( np$COUNTYFIPS ) & is.na( np$lat ) == F & is.na( np$
 
 
 
-## Instead of `fipio` (which only returns 5-digits FIPS codes
+## Instead of `fipio` (which only returns 5-digit FIPS codes)
 # We can manually submit a spreadsheet of the latitude longitude codes to GEOCODIO service to do reverse
-# geocoding which returns the FIPS codes (url: https://www.geocod.io/convert-addresses-to-census-tracts/)
+# geocoding which returns the FIPS codes (url: https://www.geocod.io/convert-addresses-to-census-tracts/).
+# This service provides up to 2,500 free queries per day.
+
 
 lf2<- paste0( lf, '/7-Geocodio' )
 
@@ -92,15 +94,18 @@ setwd( lf2 )
 
 # write.csv( trim.sf, 'trim.csv')   # push this file through the GEOCODIO service
 
-# read in reverse geocoded files and clean up FIPS columns
+# read in reverse geocoded files from GEOCODIO and clean up FIPS columns
 np.trim <- read.csv("trim-geocodio.csv") %>%
+  
   rename( COUNTYFIPS = County.FIPS,
          STATEFIPS = State.FIPS,
          TRACTFIPS = Census.Tract.Code ) %>%
+  
   mutate( STATEFIPS = ifelse( str_count( STATEFIPS, '\\d' ) == 1, paste0( '0', STATEFIPS ),STATEFIPS ),
           fips.st = ifelse( is.na( STATEFIPS ) == F , paste0( STATEFIPS ),NA ),
           
-          COUNTYFIPS = str_sub( COUNTYFIPS, -3, -1 ),
+          COUNTYFIPS = str_sub( COUNTYFIPS, -3, -1 ), # COUNTYFIPS column is only column not standardized like the others
+          # since it is concatenated with the state FIPS code. We will keep only the first three digits of each string
           COUNTYFIPS = ifelse( str_count( COUNTYFIPS, '\\d' ) == 1, paste0( '00', COUNTYFIPS ),
                                ifelse( str_count( COUNTYFIPS, '\\d' ) == 2,paste0( '0', COUNTYFIPS ),
                                        ifelse( str_count( COUNTYFIPS, '\\d' ) == 3, paste0( COUNTYFIPS ), COUNTYFIPS ) ) ),
@@ -111,10 +116,19 @@ np.trim <- read.csv("trim-geocodio.csv") %>%
                                       ifelse( str_count( TRACTFIPS, '\\d' ) == 4, paste0( '00', TRACTFIPS ),
                                               ifelse( str_count( TRACTFIPS, '\\d' ) == 5, paste0( '0', TRACTFIPS ),
                                                       TRACTFIPS ) ) ) ),
+          
           GEOID = ifelse( is.na( STATEFIPS ) == F & is.na( COUNTYFIPS ) == F & is.na( TRACTFIPS ) == F,
                           paste0( STATEFIPS, COUNTYFIPS, TRACTFIPS ), NA ) ) %>%
+  
   select( key, STATEFIPS, COUNTYFIPS, TRACTFIPS, fips.ct, fips.st, GEOID )
+# STATEFIPS, COUNTYFIPS, TRACTFIPS are standardized to 2, 3, and 6 digits, respectively.
+# fips.ct is the 5-digit county FIPS code (state and county FIPS concatenated)
+# fips.st is the 2-digit state code (redundant--same as STATEFIPS)
+# GEOID is the 11-digit concatenated tract FIPS (named GEOID due to overlap with data coming from
+# `tidycensus` and `tigris`--this makes it easier for merging later on)
 
+
+## Replace values in the original `np` dataset that had FIPS values missing but were recovered by GEOCODIO
 these.keys <- which( np$key %in% np.trim$key )
 these.cols <- colnames( np.trim )
 
@@ -122,7 +136,7 @@ these.cols <- colnames( np.trim )
 np.b <- np
 np.b[ these.keys, these.cols ] <- np.trim
 
-sum( is.na( np$GEOID ) )
+sum( is.na( np$GEOID ) ) # 642 missing before GEOCODIO reverse geocoding
 sum( is.na( np.b$GEOID ) ) # only 312 missing now
 
 # save
