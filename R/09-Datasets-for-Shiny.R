@@ -4,7 +4,7 @@
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------
 # 
-# In this script, we will generate some general shaepfiles (to be stored as .rds) that will, hopefully, speed up the 
+# In this script, we will generate some general shapefiles (to be stored as .rds) that will, hopefully, speed up the 
 # data import process on the Shiny app we construct. Several files will be generated and stored in the "/Data-Rodeo"
 # folder of our directory. The idea will be to generate data files for both Dorling Cartograms and general maps that are
 # not resized. In every scenario, we will have files at the level of census tracts and counties.
@@ -57,15 +57,16 @@ t <- transform( t, crs = 3395 ) # project onto compatible crs
 
 
 
-# pull Census population (at the tract level) data from `tidycensus`
+# pull Census population (at the tract level) data using `tidycensus`
 # merge with NPO dataset and count numbers of NPOs within tracts to create density metric
 
 # loop through state codes as requesting all states at once will cause crash
 state.codes <- unique( str_sub( t$GEOID, -11, -10 ) )
 
-# remove FIPS codes for Mariana Islands, American Samoa, Guam, Virgin Islands (tidycensus won't return data for these)
+# remove FIPS codes for Mariana Islands, American Samoa, Guam, Virgin Islands (`tidycensus` won't return data for these)
 state.codes <- state.codes[ !state.codes %in% c( "69", "60", "66", "78" ) ]
 
+# loop through state FIPS codes
 l <- list()
 for (i in 1:length( state.codes ) ) {
   
@@ -93,11 +94,105 @@ d.2 <- npo.sf %>%
   ungroup() %>%
   distinct( GEOID, n ) %>%      # retain only a dataframe of tract FIPS and the no. of nonprofits in them
   left_join( d.1, .) %>%        # join with Census population data
-  mutate( dens = ( n / pop ) * 1000 ) %>%         # NPO create density metric (NPOs per 1k in the population)
+  mutate( dens = ( n / pop ) * 1000 ) %>%         # create NPO density metric (NPOs per 1k in the population)
   distinct( GEOID, pop , n, dens )                # keep unique rows (i.e., 1 for each tract)
-  mutate( dens.q = factor( quant.cut( var = 'dens', x = 5 ,df = . ) ) )       # bin into quintiles
+
+# obtain MSA cartographic boundary shapefiles
+m <- core_based_statistical_areas( cb = T )
+
+# spatial join MSA names to tract-level data
+sj <- m %>%
+  rename (MSA = NAME ) %>%
+  select( MSA, geometry ) %>%
+  st_join( t, ., left = T ) %>%          # spatial left join
+  left_join( ., d.2) %>%                 # append Census data
+  distinct( )
+
+length( unique( sj$GEOID ) ) # we have some duplicated rows
+
+sj.dup <- sj[which(duplicated(sj$GEOID)),]
+# View( sj.dup )
+
+#### After diagnosing, it appears that some Census tracts are counted in more than 1 MSA. Thus, 
+#### No need for any changes since we will be looking and subsetting based on MSA, not tract
 
 
+## number of MSA's with > 500k population
+
+keep.msa.500k <- sj %>%
+  group_by( MSA ) %>%
+  mutate( sum.pop = sum( pop )) %>%
+  ungroup() %>%
+  filter( sum.pop > 500000 ) %>%
+  distinct( MSA ) 
+
+# results in 130 MSAs
+
+## number of MSAs with > 1.5m population
+
+keep.msa.1.5m <- sj %>%
+  group_by( MSA ) %>%
+  mutate( sum.pop = sum( pop )) %>%
+  ungroup() %>%
+  filter( sum.pop > 1500000 ) %>%
+  distinct( MSA ) 
+
+# results in 64 MSAs
 
 
+## Decision: for now, we will move forward with keeping only the Census tracts in those MSAs with > 1.5 m 
+# in the population--this will keep the load times moving quickly in the dashboard
+
+# subset census data in those 64 MSAs
+
+d.3 <- sj %>%
+  filter( MSA %in% keep.msa.1.5m$MSA )
+
+## Save separate datasets according to MSA to later load into the dashboard app:
+
+msas <- unique( d.3$MSA ) # dataset names will be according to MSA names
+
+# text process them a bit to make them easier to store
+msa.file <- msas %>%
+  str_extract( ., "^.*(?=(\\,))" ) %>% # first, extract everything before the comma (subsequently leading to the state)
+  str_replace( ., "\\s", "-" )%>%        # replace white space with a "-"
+  str_remove( ., "\\." )                # remove any "." from the strings
+
+# now loop and make store shapefiles as .rds in "/Data-Rodeo"
+
+setwd("../np-density-dashboard/Data-Rodeo")
+# dir.create("Dashboard-MSA-Data")
+# dir()
+setwd("Dashboard-MSA-Data")
+
+# create LOG file/metadata
+log.head <- c( "Iteration", "MSA", "No.Tracts", "Pop", "No.NPO"," Save.Time" )
+
+write( log.head, file = "MSA-Data-Log.txt", append = F )
+
+for ( i in 1:length( msa.file ) ) {
+  
+  start.time <- Sys.time()
+  
+  dat <- d.3[ which( d.3$MSA == msas[i] ), ]
+  
+  saveRDS( dat , paste0( msa.file[i], "-MSA.rds"))
+  
+  end.time <- Sys.time()
+  
+  # update log/metadata
+  Iteration <- i
+  MSA <- as.character( levels( factor( dat$MSA ) )[1] )
+  No.Tracts <- as.character( nrow( dat ) )
+  Pop <- as.character( sum( dat$pop, na.rm = T ) )
+  No.NPO <- as.character( sum( dat$n, na.rm = T ) )
+  Save.Time <- as.character( end.time - start.time )
+  log <- c( Iteration, MSA, No.Tracts, Pop, No.NPO, Save.Time)
+  log <- paste( log, collapse = ', ' ) # comma-delimiter
+  write( log, file = "MSA-Data-Log.txt", append = T )
+  
+  print( end.time - start.time)
+  print( paste0( "Iteration ", i, "/", length( msa.file ), " complete" ) ) 
+  
+}
 
