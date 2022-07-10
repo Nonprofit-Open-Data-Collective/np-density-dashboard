@@ -14,6 +14,8 @@ library( tigris )
 library( tidyverse )
 library( cartogram )
 library( ggpubr )
+library( urbanmapr )
+library( tidycensus )
 # import helper functions
 source('/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/np-density-dashboard/R/helpers.R')
 
@@ -116,3 +118,135 @@ chloro <- ggplot()+
 
 ggarrange( chloro, dor, nrow=1, ncol=2, common.legend = T, legend='bottom')
 
+
+
+
+
+## US Counties Example
+
+
+ct.sf <- counties( cb=T ) %>%
+  shift_geometry(  ) %>%      # shift and rescale HI, AK, and PR
+  transform( crs = 3395 )    # project counties sf to compatible crs
+
+
+# no. of NPOs by county 5-digit FIPS in the NPO dataset
+n.ct <- np %>%
+  group_by( fips.ct ) %>%
+  mutate( n = ifelse( is.na( n() ) ==T, 0, n( ) ) ) %>% # count of NPO's within county FIPS
+  distinct( fips.ct, n ) 
+
+
+# county population query and merge
+pop.ct <- get_acs( geography = "county", 
+                   variables = "B01003_001" ) %>%   # TOTAL_POPULATION
+  select( fips.ct = GEOID, pop = estimate )    # select and rename
+
+
+# merge ACS data to NPO data where rows are counties identified by their 5-digit FIPS codes
+dat <- st_as_sf( pop.ct %>%
+                   mutate( fips.ct =  fips.ct  ) %>%
+                   left_join( n.ct, . ) %>%
+                   mutate( dens = ( n / pop ) * 1000 ) %>%
+                   mutate( pop.w = pop /  min( pop.ct$pop, na.rm=T ) ) %>%   # ctandardizes it to max of 1.5
+                   left_join( ., ct.sf, by = c( "fips.ct" = 'GEOID') ) ) %>%
+  st_transform( crs = 3395 ) %>%
+  filter( is.na( pop.w )==F ) # remove FIPS in Guam, VI, and some Alaska counties without population estimates
+# `cartogram_dorling` function will break if there are missing values in the weight parameter
+
+ct.dorling <- cartogram_dorling( x = dat, weight = "pop.w" , k = 0.8 )  # k parameter was increased to augment circle size
+
+ggplot(  )  +
+  geom_sf(d.dorling, mapping = aes( fill = dens ),  color=NA) +
+  theme_minimal()
+
+# overlay state shapefiles
+sts <- states( cb= T ) %>%
+  shift_geometry() %>%
+  st_transform( crs = 3395) %>%
+  filter( STUSPS %in% c( state.abb, 'PR' ) ) 
+
+ggplot(sts) +
+  geom_sf(  )
+
+
+st.u<-urbnmapr::get_urbn_map( map = "states", sf = T) %>%
+  filter(state_abbv %in% c( "AK", "HI", "PR" ) ) %>%
+  st_transform( crs = 3395)
+
+
+nat <- tigris::states( cb = T) %>%
+  shift_geometry()
+
+ggplot(nat)+
+  geom_sf()
+
+ggplot( sts ) +
+  geom_sf ( fill = 'white' ) +
+  geom_sf(d.dorling, mapping = aes( fill = dens ),
+          color = NA, size = 0.5 ) + theme_minimal()
+   
+  theme_minimal()
+  scale_fill_manual( 'Quintile', values = c( "#DCE319FF", "#55C667FF", 
+                                             "#238A8DFF", "#39568CFF","#440154FF" ) ) +
+  theme_minimal()
+  
+
+  library(tmap)
+  
+  
+  tm_shape(sts)+tm_polygons("geometry", fill= "black")
+
+  
+    st <- tigris::states(cb=T) %>%
+    left_join(., get_acs( geography = "state", 
+                          variables = "B01003_001" ) ) %>%
+    rename( pop = estimate ) %>%
+    mutate( maxpop = max( pop, na.rm = T )) %>%
+    mutate( pop.w = pop /maxpop ) %>%
+    filter( is.na( pop.w ) ==F ) %>%
+    st_transform( crs = 3395)
+  
+  sd.dorling <- cartogram_dorling( x = st, weight = "pop.w" , k=0.05 )
+  
+
+  
+  ## US States example
+  
+  st.sf <- states( cb=T ) %>%
+  shift_geometry(  ) %>%      # shift and rescale HI, AK, and PR
+    transform( crs = 3395 )    # project counties sf to compatible crs
+  
+  
+  # no. of NPOs by county 5-digit FIPS in the NPO dataset
+  n.st <- np %>%
+    group_by( STATEFIPS ) %>%
+    mutate( n = ifelse( is.na( n() ) ==T, 0, n( ) ) ) %>% # count of NPO's within county FIPS
+    distinst( STATEFIPS, n ) 
+  
+  
+  # county population query and merge
+  pop.st <- get_acs( geography = "state", 
+                     variables = "B01003_001" ) %>%   # TOTAL_POPULATION
+    selest( STATEFIPS = GEOID, pop = estimate )    # selest and rename
+  
+  
+  # merge ACS data to NPO data where rows are counties identified by their 5-digit FIPS codes
+  dat <- st_as_sf( pop.st %>%
+                     mutate( STATEFIPS =  STATEFIPS  ) %>%
+                     left_join( n.st, . ) %>%
+                     mutate( dens = ( n / pop ) * 1000 ) %>%
+                     mutate( pop.w = pop /  min( pop.st$pop, na.rm=T ) ) %>%   # standardizes it to max of 1.5
+                     left_join( ., st.sf, by = c( "STATEFIPS" = 'GEOID') ) ) %>%
+    st_transform( crs = 3395 ) %>%
+    filter( is.na( pop.w )==F ) # remove FIPS in Guam, VI, and some Alaska counties without population estimates
+  # `cartogram_dorling` funstion will break if there are missing values in the weight parameter
+  
+  
+  d.dorling <- cartogram_dorling( x = dat, weight = "pop.w" , k=1.5 )  # k parameter was increased to augment circle size
+  
+  ggplot(  )  +
+    geom_sf(d.dorling, mapping = aes( fill = dens ),  color=NA) +
+    theme_minimal()
+  
+  
