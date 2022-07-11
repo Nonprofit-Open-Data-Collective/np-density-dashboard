@@ -22,8 +22,24 @@ main <- "/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial
 
 setwd( paste0( main, "np-density-dashboard/Data-Rodeo" ) )
 
-
+## Cumulative county data
 cnties <- readRDS( "Dashboard-County-Data/USA-Counties.rds" )
+
+## Yearly County Data
+setwd("Dashboard-County-Data/By-Year")
+
+# read-in yearly data
+for (i in 1:length( dir( ) ) ) {
+  
+  ct.yr <- paste0( 'cnties', 2014:2021 )
+  
+  assign( ct.yr[ i ], readRDS( dir()[i] ) )
+  
+  
+}
+
+
+setwd( paste0( main, "np-density-dashboard/Data-Rodeo" ) )
 cnties.dorling <- readRDS( "Dashboard-County-Data/Dorling-Shapefiles/USA-Counties-Dorling.rds" )
 
 # merge
@@ -43,6 +59,8 @@ lp.plot.dorling <- function( df ){
   theme_minimal()
 }
 
+
+
 # USER INTERFACE
 ui <- bootstrapPage(
   
@@ -54,8 +72,9 @@ ui <- bootstrapPage(
                       sidebarLayout(
                         sidebarPanel(
                           pickerInput("yr_select", "Year:",   
-                                      choices = c("Cumulative: 2014-2021"), 
-                                      selected = c("Cumulative: 2014-2021"),
+                                      choices = c("Cumulative: 2014-2021", "2014", "2015", "2016", "2017", "2018", 
+                                                  "2019", "2020", "2021" ), 
+                                      selected = c("Cumulative: 2014-2021" ),
                                       multiple = FALSE) ) ,
                       
                       mainPanel(
@@ -74,10 +93,36 @@ server <- function( input, output ) {
   
   
   
-  year.reactive.df <- reactive( if(input$yr_select=="Cumulative: 2014-2021") {
+  year.reactive.df <- reactive(
+    {
+    if(input$yr_select=="Cumulative: 2014-2021") {
     cnties
   }
-  
+      else if(input$yr_select=="2014") {
+    cnties2014
+  }
+      else if(input$yr_select=="2015") {
+      cnties2015
+    }
+      else if(input$yr_select=="2016") {
+      cnties2016
+    }
+      else  if(input$yr_select=="2017") {
+      cnties2017
+    }
+      else   if(input$yr_select=="2018") {
+      cnties2018
+    }
+      else   if(input$yr_select=="2019") {
+      cnties2019
+    }
+      else    if(input$yr_select=="2020") {
+      cnties2020
+    }
+      else  if(input$yr_select=="2021") {
+      cnties2021
+    }
+  }
   
   )
 

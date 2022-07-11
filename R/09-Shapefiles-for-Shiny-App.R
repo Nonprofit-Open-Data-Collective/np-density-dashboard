@@ -86,7 +86,7 @@ d.1 <- do.call( "rbind", l ) # dataframe containing a column for tract GEOID and
 
 d.2 <- npo.sf %>%
   group_by( GEOID ) %>%         # group by tract FIPS for subsequent computation
-  mutate( n = n() ) %>%         # count number of rows per tract FIPS since rows are the nonprofits
+  mutate( n = ifelse( is.na( n() ) ==T, 0, n( ) ) ) %>%         # count number of rows per tract FIPS since rows are the nonprofits
   ungroup() %>%
   distinct( GEOID, n ) %>%      # retain only a dataframe of tract FIPS and the no. of nonprofits in them
   left_join( d.1, .) %>%        # join with Census population data
@@ -245,7 +245,7 @@ ct.sf <- transform( ct.sf, crs = 3395 )
 # no. of NPOs by county 5-digit FIPS in the NPO dataset
 n.ct <- npo %>%
   group_by( fips.ct ) %>%
-  mutate( n = n( ) ) %>% # count of NPO's within county FIPS
+  mutate( n = ifelse( is.na( n() ) ==T, 0, n( ) ) ) %>% # count of NPO's within county FIPS
   distinct( fips.ct, n ) 
 
 
@@ -314,3 +314,52 @@ ct.dorling <- cartogram_dorling( x = dat, weight = "pop.w" , k = 0.8 )  # k para
 setwd( "Dorling-Shapefiles" )
 
 saveRDS( ct.dorling, "USA-Counties-Dorling.rds")
+
+
+
+## Nonprofits by year shapefiles/data
+
+setwd( lf )
+setwd("../np-density-dashboard/Data-Rodeo/Dashboard-County-Data/")
+#dir.create( "By-Year")
+
+yr.levels <- levels( factor( npo$YR ) )
+
+# ct.sf <- get_urbn_map( map = "counties", sf = TRUE ) %>%
+#   st_transform( crs = 3395 )
+# 
+# pop.ct <- get_acs( geography = "county", 
+#                    variables = "B01003_001" ) %>%   # TOTAL_POPULATION
+#   select( fips.ct = GEOID, pop = estimate )    # select and rename
+
+
+for(i in 1: length( yr.levels ) ) {
+  start.time <- Sys.time()
+  setwd( lf )
+  setwd("../np-density-dashboard/Data-Rodeo/Dashboard-County-Data/By-Year" )
+  
+  n.ct.yr <- npo %>%
+  filter( YR == yr.levels[i] ) %>%
+  group_by( fips.ct ) %>%
+  mutate( n = ifelse( is.na( n() ) ==T, 0, n( ) ) ) %>% # count of NPO's within county FIPS
+  distinct( fips.ct, n, YR )
+  
+  n.pop.merge <- pop.ct %>%
+    mutate( fips.ct =  fips.ct  ) %>%
+    left_join( n.ct.yr, . ) %>%
+    mutate( dens = ( n / pop ) * 1000 ) 
+  
+  ( ct <- ct.sf %>%
+      left_join( ., n.pop.merge, by = c( 'county_fips' = 'fips.ct' ) ) %>%
+      st_transform( crs = 3395 ) %>%
+    mutate( n = ifelse( is.na( n )==T, 0, n) ) ) %>%            # fix NAs for counties without new NPOs
+    saveRDS( paste0( "USA-Counties-", yr.levels[i],".rds") )
+  
+  end.time <- Sys.time()
+  
+  print( end.time - start.time)
+  print( paste0( "Iteration ", i, "/", length( yr.levels ), " complete" ) ) 
+  
+  
+}
+
