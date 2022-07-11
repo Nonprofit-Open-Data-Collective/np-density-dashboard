@@ -325,12 +325,12 @@ setwd("../np-density-dashboard/Data-Rodeo/Dashboard-County-Data/")
 
 yr.levels <- levels( factor( npo$YR ) )
 
-# ct.sf <- get_urbn_map( map = "counties", sf = TRUE ) %>%
-#   st_transform( crs = 3395 )
-# 
-# pop.ct <- get_acs( geography = "county", 
-#                    variables = "B01003_001" ) %>%   # TOTAL_POPULATION
-#   select( fips.ct = GEOID, pop = estimate )    # select and rename
+ ct.sf <- get_urbn_map( map = "counties", sf = TRUE ) %>%
+   st_transform( crs = 3395 )%>%
+   rename( fips.ct = county_fips ) %>%
+   left_join(., ( get_acs( geography = "county", 
+                  variables = "B01003_001" )%>%   # TOTAL_POPULATION
+  select( fips.ct = GEOID, pop = estimate ) ) )    # select and rename
 
 
 for(i in 1: length( yr.levels ) ) {
@@ -344,15 +344,11 @@ for(i in 1: length( yr.levels ) ) {
   mutate( n = ifelse( is.na( n() ) ==T, 0, n( ) ) ) %>% # count of NPO's within county FIPS
   distinct( fips.ct, n, YR )
   
-  n.pop.merge <- pop.ct %>%
-    mutate( fips.ct =  fips.ct  ) %>%
-    left_join( n.ct.yr, . ) %>%
-    mutate( dens = ( n / pop ) * 1000 ) 
-  
-  ( ct <- ct.sf %>%
-      left_join( ., n.pop.merge, by = c( 'county_fips' = 'fips.ct' ) ) %>%
+  ( ct <- 
+      left_join( ct.sf, n.ct.yr ) %>%
       st_transform( crs = 3395 ) %>%
     mutate( n = ifelse( is.na( n )==T, 0, n) ) ) %>%            # fix NAs for counties without new NPOs
+    mutate( dens = ( n / pop )* 1000 )%>%
     saveRDS( paste0( "USA-Counties-", yr.levels[i],".rds") )
   
   end.time <- Sys.time()
