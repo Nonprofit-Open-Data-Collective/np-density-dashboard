@@ -73,8 +73,8 @@ ui <- bootstrapPage(
                       
                       sidebarLayout(
                         sidebarPanel(
-                          span( div( img(src="https://uofi.box.com/s/9sp34li57a0ni9765tza3dbyjtksgvck",
-                                       height="45%", width="70%", align="center" ) ) ),
+                          span( div( img(src="https://www.baltimoreniif.org/wp-content/uploads/2019/02/urban-logo.jpg",
+                                       height="45%", width="90%", align="center" ) ) ),
                           
                           pickerInput("yr_select", "Year:",   
                                       choices = c("Cumulative: 2014-2021", "2014", "2015", "2016", "2017", "2018", 
