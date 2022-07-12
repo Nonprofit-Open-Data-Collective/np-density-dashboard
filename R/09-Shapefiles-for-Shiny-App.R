@@ -268,11 +268,6 @@ setwd( "Dashboard-County-Data" )
 saveRDS( ct, "USA-Counties.rds")
 
 
-ggplot( ) + geom_sf( ct,
-                     mapping = aes( fill = dens.q ),
-                     color = NA, size = 0.5 ) +
-  scale_fill_brewer( palette = 1 ) +
-  theme_minimal( ) 
 
 ## Counties Dorling Cartogram
 
