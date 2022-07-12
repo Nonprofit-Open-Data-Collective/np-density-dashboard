@@ -17,7 +17,6 @@ library( shinythemes )
 library( shinyWidgets )
 library( RColorBrewer )
 library( urbnthemes )
-library( magick )
 
 
 # Render png to jpeg
@@ -55,8 +54,9 @@ lp.plot.chloro <- function( df ){
   ggplot( ) + geom_sf( df,
                              mapping = aes( fill = dens.q ),
                              color = NA, size = 0.5 ) +
-    scale_fill_brewer( palette = 1 ) +
-  theme_minimal( ) 
+    scale_fill_brewer( "Quantile", palette = 1 ) +
+    theme_minimal( ) +
+    theme( text = element_text( family = "Helvetica Light" ) )
 }
 
 lp.plot.dorling <- function( df ){
@@ -73,6 +73,8 @@ ui <- bootstrapPage(
              HTML('<a style="text-decoration:none;cursor:default;color:#FFFFFF;" class="active" href="#">U.S. Nonprofit Density</a>'), 
              id="nav",
              tabPanel("New Nonprofit Density, 2014-2021: U.S. Counties",
+                      div(class="outer",
+                          tags$head(includeCSS("/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/np-density-dashboard/R/Nonprofit-Density/styles.css")),
                       
                       sidebarLayout(
                         sidebarPanel(
@@ -93,7 +95,7 @@ ui <- bootstrapPage(
              )
   )
 )
-
+)
   
 
 # SERVER
