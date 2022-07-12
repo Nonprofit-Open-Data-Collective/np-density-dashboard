@@ -17,7 +17,10 @@ library( shinythemes )
 library( shinyWidgets )
 library( RColorBrewer )
 library( urbnthemes )
+library( magick )
 
+
+# Render png to jpeg
 
 # Import counties landing page map
 main <- "/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/"
@@ -69,11 +72,11 @@ ui <- bootstrapPage(
              
              HTML('<a style="text-decoration:none;cursor:default;color:#FFFFFF;" class="active" href="#">U.S. Nonprofit Density</a>'), 
              id="nav",
-             tabPanel("New Nonprofit Cumulative Density, 2014-2021: U.S. Counties",
+             tabPanel("New Nonprofit Density, 2014-2021: U.S. Counties",
                       
                       sidebarLayout(
                         sidebarPanel(
-                          span( div( img(src="https://www.baltimoreniif.org/wp-content/uploads/2019/02/urban-logo.jpg",
+                          span( div( img(src="https://lh3.googleusercontent.com/k-BWWGuT_48sXsGlq0mwVDWbo0nFO7me3F4sVcAeJjB-mWsYJlhVm4HEO5iL1moxc5hKYwG6ZYCPxVw9FxLf0vuOSQN2rq3DGEgjdvJMMHaiWnZMqOouKaZiRd8qQHJn3vEn7LPQUL3ZziwRsboOcsGiRLevWAIULQ_4FtENb_e6gmBKAvciUz9-CR0RCISXWtRrbP3yRXwes64LmfYoPAZrrXb0pSReSLbkLAa5hAWmeuFONK25CticLz3Q3FzTSO7ovW342EuU3KwXkjTyMx-6NuZ2TBzLltA9Ott2X_RJUNUbvfXub58i_C6_MXb70RpFZJETHkiDxOdD2p7-cFFZA7owQJrMIOIr-Q_cDDqfbYgfxN4ahn6fU0MtCrcE9cz8xeKBkj4jRVgUdnuI8IpvxW-eQABhC9pE0yfSUMTimAeNYx860x4I51uYO_Fspn7VTn0hhV-FnLSz7YtjVEVyPGE4o89bWQ6IR4-Ls0VAAUhwZlm8-HjMuZQgXhNwjMwd-SKYKaM7F0MKLQ-kd74Sz01ZMy1b4ZYl3_88dPYQeAWFuFtsO3WE5deftuI-6qaqu7cKyvZRMJYav778gIcB6Pb4PUNa9C4EjHfF74aMreOowGdwnLjAIrognCeq_im_sjKCzA-TRIzrHZbgO8p3bJXuyiCizpC2dWWkv9RdcS1VYYmTsAMe7RVFG8v0EVofotjxCye84drStb2cTiZaEirD6h8-uKLN9-8cMHaLwRc620Jwa5ob0Il0mNq7psmGd5xcnZ30paL_snsi4SYEMLfKrTeT=s1000-no?authuser=0",
                                        height="45%", width="90%", align="center" ) ) ),
                           
                           pickerInput("yr_select", "Year:",   
