@@ -17,6 +17,7 @@ library( shinythemes )
 library( shinyWidgets )
 library( RColorBrewer )
 library( urbnthemes )
+library( leaflet )
 
 source('/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/np-density-dashboard/R/helpers.R')
 
@@ -30,10 +31,10 @@ setwd( paste0( main, "np-density-dashboard/Data-Rodeo" ) )
 ## Cumulative county data
 cnties <- readRDS( "Dashboard-County-Data/USA-Counties.rds" )
 
-## Yearly County Data
+## Yearly County Data/shapefile
 setwd("Dashboard-County-Data/By-Year")
 
-# read-in yearly data
+## Read-in yearly data/shapefiles for county chloropleths
 for (i in 1:length( dir( ) ) ) {
   
   ct.yr <- paste0( 'cnties', 2014:2021 )
@@ -43,14 +44,33 @@ for (i in 1:length( dir( ) ) ) {
   
 }
 
+## Leaflet county data/shapefile
+setwd( paste0( main,"np-density-dashboard/Data-Rodeo/Dashboard-County-Data/Leaflet-Shapefiles" ) )
+
+cnty.leaf <- readRDS( "USA-Counties-Leaflet.rds" )
+
+## Read-in yearly data for county Leaflets
+setwd( "Leaflet-By-Year" )
+
+for (i in 1:length( dir( ) ) ) {
+  
+  ct.yr.lf <- paste0( 'cnty.leaf.', 2014:2021 )
+  
+  assign( ct.yr.lf[ i ], readRDS( dir()[i] ) )
+  
+  
+}
+
+
+## Read in cumulative county Dorling Cartogram data/shapefile
 
 setwd( paste0( main, "np-density-dashboard/Data-Rodeo" ) )
 cnties.dorling <- readRDS( "Dashboard-County-Data/Dorling-Shapefiles/USA-Counties-Dorling.rds" )
 
-# merge
-color.function <- colorRampPalette( c("gold1", "blue4" ) )
-col.ramp <- color.function( 7 ) # number of groups you desire
 
+### Plotting Functions ###
+
+# landing page chloropleths
 lp.plot.chloro <- function( df ){
   ggplot( ) + geom_sf( df,
                              mapping = aes( fill = dens.q ),
@@ -60,6 +80,7 @@ lp.plot.chloro <- function( df ){
     theme( text = element_text( family = "Helvetica Light" ) )
 }
 
+# landing page Dorling Cartograms
 lp.plot.dorling <- function( df ){
   
   df$dens.q <- factor( quant.cut( var = 'dens', x = 7 ,df = df ) )
@@ -71,6 +92,17 @@ lp.plot.dorling <- function( df ){
     theme( text = element_text( family = "Helvetica Light" ) )
 }
 
+# landing page interactiveLeaflet
+
+lp.plot.leaf <- function( df ){
+  
+  leaflet(df) %>% 
+    addTiles() %>%
+    addPolygons(color = "#444444", weight = 1, smoothFactor = 0.5,
+                opacity = 1.0, fillOpacity = 0.5, popup = ~as.character(popup) ) %>%
+    setView(-98.35, 39.50, zoom = 3.499)
+  
+}
 
 # USER INTERFACE
 ui <- bootstrapPage(
@@ -95,8 +127,10 @@ ui <- bootstrapPage(
                       
                       mainPanel(
                         tabsetPanel(
-                          tabPanel("Chloropleth", plotOutput("lp.1")),
-                          tabPanel( "Dorling Cartogram", plotOutput( "lp.2" ) ) )
+                          tabPanel("Chloropleth", plotOutput("lp.1") ),
+                          tabPanel( "Dorling Cartogram", plotOutput( "lp.2" ) ),
+                          tabPanel( "Interactive Leaflet", leafletOutput("lp.3"),
+                                    p() ) )
                         )
                       )
              )
@@ -173,13 +207,44 @@ server <- function( input, output ) {
         cnties.dorling
       }
     }
+  )
     
+    year.reactive.df.leaflet <- reactive(
+      {
+        if(input$yr_select=="Cumulative: 2014-2021") {
+          cnty.leaf
+        }
+        else if(input$yr_select=="2014") {
+          cnty.leaf.2014
+        }
+        else if(input$yr_select=="2015") {
+          cnty.leaf.2015
+        }
+        else if(input$yr_select=="2016") {
+          cnty.leaf.2016
+        }
+        else  if(input$yr_select=="2017") {
+          cnty.leaf.2017
+        }
+        else   if(input$yr_select=="2018") {
+          cnty.leaf.2018
+        }
+        else   if(input$yr_select=="2019") {
+          cnty.leaf.2019
+        }
+        else    if(input$yr_select=="2020") {
+          cnty.leaf.2020
+        }
+        else  if(input$yr_select=="2021") {
+          cnty.leaf.2021
+        }
+      }
   )
   
 
   output$lp.1 <- renderPlot( lp.plot.chloro( year.reactive.df.chloro() ) )
   output$lp.2 <- renderPlot( lp.plot.dorling( year.reactive.df.dorling() ) )
-
+  output$lp.3 <- renderLeaflet( lp.plot.leaf( year.reactive.df.leaflet() ) )
 }
 
 
