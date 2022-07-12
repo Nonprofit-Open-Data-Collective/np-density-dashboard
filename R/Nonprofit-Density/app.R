@@ -16,6 +16,7 @@ library( sf )
 library( shinythemes )
 library( shinyWidgets )
 library( RColorBrewer )
+library( urbnthemes )
 
 
 # Import counties landing page map
@@ -55,7 +56,6 @@ lp.plot.chloro <- function( df ){
   theme_minimal( ) 
 }
 
-
 lp.plot.dorling <- function( df ){
   ggplot(  )  +
   geom_sf( df, mapping = aes( fill = dens ),  color = NA ) +
@@ -63,17 +63,19 @@ lp.plot.dorling <- function( df ){
 }
 
 
-
 # USER INTERFACE
 ui <- bootstrapPage(
-  
   navbarPage(theme = shinytheme( "flatly" ), collapsible = TRUE,
+             
              HTML('<a style="text-decoration:none;cursor:default;color:#FFFFFF;" class="active" href="#">U.S. Nonprofit Density</a>'), 
              id="nav",
-             tabPanel("New Nonprofit Cumulative Density, 2014-2021 : U.S. Counties",
+             tabPanel("New Nonprofit Cumulative Density, 2014-2021: U.S. Counties",
                       
                       sidebarLayout(
                         sidebarPanel(
+                          span( div( img(src="https://uofi.box.com/s/9sp34li57a0ni9765tza3dbyjtksgvck",
+                                       height="45%", width="70%", align="center" ) ) ),
+                          
                           pickerInput("yr_select", "Year:",   
                                       choices = c("Cumulative: 2014-2021", "2014", "2015", "2016", "2017", "2018", 
                                                   "2019", "2020", "2021" ), 
