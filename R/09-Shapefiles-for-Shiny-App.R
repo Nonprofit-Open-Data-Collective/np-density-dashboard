@@ -30,6 +30,8 @@ library( cartogram )        # Create sf objects for Dorling Cartograms
 options( tigris_class = "sf" )
 options( tigris_use_cache = TRUE )
 
+source('/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/np-density-dashboard/R/helpers.R')
+
 
 lf <- "/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/Large-Files-Bank"
 
@@ -251,9 +253,9 @@ n.ct <- npo %>%
     left_join( ct.sf, n.ct ) %>%
     st_transform( crs = 3395 ) %>%
     mutate( n = ifelse( is.na( n )==T, 0, n) )  %>%            # fix NAs for counties without new NPOs
-  mutate( dens = ( n / pop )* 1000 ) )
+  mutate( dens = ( n / pop )* 1000 ) %>%
+  mutate( dens.q = factor( quant.cut( var = 'dens', x = 7 ,df = . ) ) ) )
   
-
 
 ## generate final county file and save
 setwd( lf )
@@ -266,6 +268,11 @@ setwd( "Dashboard-County-Data" )
 saveRDS( ct, "USA-Counties.rds")
 
 
+ggplot( ) + geom_sf( ct,
+                     mapping = aes( fill = dens.q ),
+                     color = NA, size = 0.5 ) +
+  scale_fill_brewer( palette = 1 ) +
+  theme_minimal( ) 
 
 ## Counties Dorling Cartogram
 
@@ -338,8 +345,10 @@ for(i in 1: length( yr.levels ) ) {
   ( ct <- 
       left_join( ct.sf, n.ct.yr ) %>%
       st_transform( crs = 3395 ) %>%
-    mutate( n = ifelse( is.na( n )==T, 0, n) ) ) %>%            # fix NAs for counties without new NPOs
+    mutate( n = ifelse( is.na( n )==T, 0, n) )  %>%            # fix NAs for counties without new NPOs
     mutate( dens = ( n / pop )* 1000 )%>%
+    mutate( dens.q = factor( quant.cut( var = 'dens', x = 7 ,df = . ) ) ) ) %>%
+
     saveRDS( paste0( "USA-Counties-", yr.levels[i],".rds") )
   
   end.time <- Sys.time()

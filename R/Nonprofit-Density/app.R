@@ -15,6 +15,7 @@ library( shinydashboard )
 library( sf )
 library( shinythemes )
 library( shinyWidgets )
+library( RColorBrewer )
 
 
 # Import counties landing page map
@@ -43,13 +44,15 @@ setwd( paste0( main, "np-density-dashboard/Data-Rodeo" ) )
 cnties.dorling <- readRDS( "Dashboard-County-Data/Dorling-Shapefiles/USA-Counties-Dorling.rds" )
 
 # merge
+color.function <- colorRampPalette( c("gold1", "blue4" ) )
+col.ramp <- color.function( 7 ) # number of groups you desire
 
 lp.plot.chloro <- function( df ){
   ggplot( ) + geom_sf( df,
-                             mapping = aes( fill = dens ),
-                             color = NA, size = 0.5 )+
-  theme_minimal( ) +
-  theme( legend.position = 'none' )
+                             mapping = aes( fill = dens.q ),
+                             color = NA, size = 0.5 ) +
+    scale_fill_brewer( palette = 1 ) +
+  theme_minimal( ) 
 }
 
 
