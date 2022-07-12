@@ -18,6 +18,7 @@ library( shinyWidgets )
 library( RColorBrewer )
 library( urbnthemes )
 
+source('/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/np-density-dashboard/R/helpers.R')
 
 # Render png to jpeg
 
@@ -60,9 +61,14 @@ lp.plot.chloro <- function( df ){
 }
 
 lp.plot.dorling <- function( df ){
+  
+  df$dens.q <- factor( quant.cut( var = 'dens', x = 7 ,df = df ) )
+    
   ggplot(  )  +
-  geom_sf( df, mapping = aes( fill = dens ),  color = NA ) +
-  theme_minimal()
+    geom_sf( df, mapping = aes( fill = dens.q ),  color = NA ) +
+    scale_fill_brewer( "Quantile", palette = 1 ) +
+    theme_minimal( ) +
+    theme( text = element_text( family = "Helvetica Light" ) )
 }
 
 
@@ -89,7 +95,8 @@ ui <- bootstrapPage(
                       
                       mainPanel(
                         tabsetPanel(
-                          tabPanel("Chloropleth", plotOutput("lp.1")))
+                          tabPanel("Chloropleth", plotOutput("lp.1")),
+                          tabPanel( "Dorling Cartogram", plotOutput( "lp.2" ) ) )
                         )
                       )
              )
@@ -103,7 +110,7 @@ server <- function( input, output ) {
   
   
   
-  year.reactive.df <- reactive(
+  year.reactive.df.chloro <- reactive(
     {
     if(input$yr_select=="Cumulative: 2014-2021") {
     cnties
@@ -135,9 +142,43 @@ server <- function( input, output ) {
   }
   
   )
-
-  output$lp.1 <- renderPlot( lp.plot.chloro( year.reactive.df() ) )
   
+  year.reactive.df.dorling <- reactive(
+    {
+      if(input$yr_select=="Cumulative: 2014-2021") {
+        cnties.dorling
+      }
+      else if(input$yr_select=="2014") {
+        cnties.dorling
+      }
+      else if(input$yr_select=="2015") {
+        cnties.dorling
+      }
+      else if(input$yr_select=="2016") {
+        cnties.dorling
+      }
+      else  if(input$yr_select=="2017") {
+        cnties.dorling
+      }
+      else   if(input$yr_select=="2018") {
+        cnties.dorling
+      }
+      else   if(input$yr_select=="2019") {
+        cnties.dorling
+      }
+      else    if(input$yr_select=="2020") {
+        cnties.dorling
+      }
+      else  if(input$yr_select=="2021") {
+        cnties.dorling
+      }
+    }
+    
+  )
+  
+
+  output$lp.1 <- renderPlot( lp.plot.chloro( year.reactive.df.chloro() ) )
+  output$lp.2 <- renderPlot( lp.plot.dorling( year.reactive.df.dorling() ) )
 
 }
 
