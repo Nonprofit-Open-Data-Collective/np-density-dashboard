@@ -354,3 +354,71 @@ for(i in 1: length( yr.levels ) ) {
   
 }
 
+ 
+ 
+
+## Shapefile for Leaflet Maps
+ 
+## Cumulative county data
+ 
+setwd( lf )
+ 
+setwd("../np-density-dashboard/Data-Rodeo/Dashboard-County-Data" )
+cnties <- readRDS( "USA-Counties.rds" )
+ 
+# Cumulative County Map (2014-2021)
+
+ ct.leaf <- counties( cb = T) %>%
+   left_join(., 
+             data.frame( cnties ) %>% select( fips.ct, n, dens ) 
+             , by = c( "GEOID" = "fips.ct" ) ) %>% # join Tigris county map to county data
+   
+   mutate( dens = round( dens, digits = 2 ), # round density metric to keep tidy on Leaflet popup
+           popup = paste(sep = "<br/>",      # create popup script for Leaflet map
+                         paste0("<b>",NAMELSAD,", ", STUSPS, "</b>"),
+                         paste0( "<i># New Nonprofits<i>: ", n ),
+                         paste0( "<i>Density New Nonprofits<i>: ", dens, " nonprofits / 1,000 inhabitants" ) ) )
+ 
+ 
+ # dir.create( "Leaflet-Shapefiles")
+ setwd( "Leaflet-Shapefiles" )
+ saveRDS( ct.leaf, "USA-Counties-Leaflet.rds")
+ 
+ # Now, create county leaflet maps by year which will summarize new nonprofits per year
+ # dir.create( "Leaflet-By-Year" )
+ 
+ setwd("../By-Year")
+
+  for ( i in 1:length( dir() ) ) {
+    
+    start.time <- Sys.time()
+    
+    ct.in <- readRDS( dir()[i] )
+    
+    ct.leaf <- counties( cb = T) %>%
+      left_join(., 
+                data.frame( ct.in ) %>% select( fips.ct, n, dens ) 
+                , by = c( "GEOID" = "fips.ct" ) ) %>% # join Tigris county map to county data
+      
+      mutate( dens = round( dens, digits = 2 ), # round density metric to keep tidy on Leaflet popup
+              popup = paste(sep = "<br/>",      # create popup script for Leaflet map
+                            paste0("<b>",NAMELSAD,", ", STUSPS, "</b>"),
+                            paste0( "<i># New Nonprofits<i>: ", n ),
+                            paste0( "<i>Density New Nonprofits<i>: ", dens, " nonprofits / 1,000 inhabitants" ) ) )
+    
+    
+  
+    setwd( "../Leaflet-Shapefiles/Leaflet-By-Year" ) # save directory
+    
+    saveRDS( ct.leaf, paste0( "USA-Counties-Leaflet-", c(2014:2021)[i], ".rds" ) )
+    
+    setwd("../../By-Year") # back up to yearly data storage directory
+    
+    end.time <- Sys.time()
+    
+    print( end.time - start.time)
+    print( paste0( "Iteration ", i, "/", length( dir() ), " complete" ) ) 
+  }
+ 
+ 
+ 
