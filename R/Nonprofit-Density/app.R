@@ -80,7 +80,7 @@ for (i in 1:length( dir( ) ) ) {
 ### Plotting Functions ###
 
 # landing page chloropleths
-lp.plot.chloro <- function( df ){
+lp.plot.chloro <- function( df, input ){
   
   # there are issues binning variables with high quantitites of zero values. Thus,
   # we will separate the zero and non-zero values of the metrics into separate datasets, bin them separately
@@ -96,7 +96,7 @@ lp.plot.chloro <- function( df ){
   df.out$dens.q <- factor( df.out$dens.q ) # set to factor
   
   ggplot( ) + geom_sf( df.out,             # plot
-                             mapping = aes( fill = dens.q ),
+                             mapping = aes_string( fill = input ),
                              color = NA, size = 0.5 ) +
     scale_fill_brewer( "Density Scale", palette = 1 ) +
     theme_minimal( ) +
@@ -105,7 +105,7 @@ lp.plot.chloro <- function( df ){
 }
 
 # landing page Dorling Cartograms
-lp.plot.dorling <- function( df ){
+lp.plot.dorling <- function( df, input ){
   
   # there are issues binning variables with high quantitites of zero values. Thus,
   # we will separate the zero and non-zero values of the metrics into separate datasets, bin them separately
@@ -123,7 +123,7 @@ lp.plot.dorling <- function( df ){
   df$dens.q <- factor( quant.cut( var = 'dens', x = 7 ,df = df ) )
     
   ggplot(  )  +
-    geom_sf( df, mapping = aes( fill = dens.q ),  color = NA ) +
+    geom_sf( df, mapping = aes_string( fill = input ),  color = NA ) +
     scale_fill_brewer( "Density Scale", palette = 1 ) +
     theme_minimal( ) +
     theme( text = element_text( family = "Avenir" ) )
@@ -143,9 +143,9 @@ lp.plot.leaf <- function( df ){
 
 # landing page histograms
 
-lp.plot.hist <- function( df ) {
+lp.plot.hist <- function( df, input ) {
   
-  ggplot( df, aes( x = n ) ) +
+  ggplot( df, aes_string( x =  input ) )  +
     geom_histogram( color="darkblue", fill="lightblue", bins = 40 ) +
     theme_minimal()+
     ylab( "Frequency") +
@@ -156,13 +156,13 @@ lp.plot.hist <- function( df ) {
 }
 
 # landing page summary stats
-lp.tbl <- function( df ) {
-  round( data.frame( Mean = mean( df$n, na.rm = T),
-                     Median = median( df$n, na.rm = T),
-                     Min = min( df$n, na.rm = T),
-                     Max = max( df$n, na.rm = T),
-                     Variance = var( df$n, na.rm = T),
-                     SD = sd( df$n, na.rm = T) ), digits = 2 )
+lp.tbl <- function( df, input ) {
+  round( data.frame( Mean = mean( df[[ input ]], na.rm = T),
+                     Median = median( df[[ input ]], na.rm = T),
+                     Min = min( df[[ input ]], na.rm = T),
+                     Max = max( df[[ input ]], na.rm = T),
+                     Variance = var( df[[ input ]], na.rm = T),
+                     SD = sd( df[[ input ]], na.rm = T) ), digits = 2 )
   
 }
 
@@ -190,7 +190,12 @@ ui <- bootstrapPage(
                           
                           radioButtons( "ptype", "Plot Type:",
                                         c( "Chloropleth" = "chloro",
-                                        "Dorling Cartogram" = "dorling") ) ),
+                                        "Dorling Cartogram" = "dorling") ) ,
+                        
+                        pickerInput( "metric", "Metric: ",   
+                                     choices = c("Density" ), 
+                                     selected = c("Density" ),
+                                     multiple = FALSE) ),
                       
                       mainPanel( plotOutput( "ptype" , width = "90%", height = 400),
                                  plotOutput( "lp.h.1" ,width = "90%", height = 200),
@@ -322,28 +327,41 @@ server <- function( input, output ) {
       }
   )
   
-    # Radio button for plot type
-    output$ptype <- renderPlot( {
-      switch(input$ptype,
-                     "chloro" = lp.plot.chloro( year.reactive.df.chloro() ),
-                     "dorling" = lp.plot.chloro( year.reactive.df.dorling() ) )
-    }
+
+
+  # reactive for summary statistics variable selector
+metric.reactive <- reactive({
+  if (input$metric =='Density'){
+    "n"
+  }
+})
+
+  # reactive for chloropleth variable selector
+
+metric.reactive.b <- reactive({
+  if (input$metric =='Density'){
+    "dens.q"
+  }
+})
+
+
+### Rendering ###
+
+
+# Radio button for plot type
+output$ptype <- renderPlot( {
+  switch(input$ptype,
+         "chloro" = lp.plot.chloro( df = year.reactive.df.chloro(), input = metric.reactive.b() ),
+         "dorling" = lp.plot.dorling( df = year.reactive.df.dorling(), input = metric.reactive.b() ) )
+}
 
 )
 
-
-    
-    reactive
-# County plots on landing page
-  output$lp.1 <- renderPlot( lp.plot.chloro( year.reactive.df.chloro() ) )
-  output$lp.2 <- renderPlot( lp.plot.dorling( year.reactive.df.dorling() ) )
-  output$lp.3 <- renderLeaflet( lp.plot.leaf( year.reactive.df.leaflet() ) )
-  
-# histograms
-  output$lp.h.1 <- renderPlot( lp.plot.hist( year.reactive.df.chloro() ) )
+  # histograms
+  output$lp.h.1 <- renderPlot( lp.plot.hist( df = year.reactive.df.chloro(), input = metric.reactive() ) )
 
   # tables
-  output$lp.t.1 <- renderTable( lp.tbl( year.reactive.df.chloro() ) )
+  output$lp.t.1 <- renderTable( lp.tbl( df= year.reactive.df.chloro(), input = metric.reactive() ) )
 }
 
 shinyApp( ui, server )
