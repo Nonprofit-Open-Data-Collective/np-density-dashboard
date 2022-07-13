@@ -1,11 +1,6 @@
-#
-# This is a Shiny web application. You can run the application by clicking
-# the 'Run App' button above.
-#
-# Find out more about building applications with Shiny here:
-#
-#    http://shiny.rstudio.com/
-#
+###---------------------------------------------------
+###   SHINY APP--NONPROFIT DENSITY
+###---------------------------------------------------
 
 library( shiny )
 library( tidyverse )
@@ -37,7 +32,7 @@ setwd("Dashboard-County-Data/By-Year")
 ## Read-in yearly data/shapefiles for county chloropleths
 for (i in 1:length( dir( ) ) ) {
   
-  ct.yr <- paste0( 'cnties', 2014:2021 )
+  ct.yr <- paste0( 'cnties.', 2014:2021 )
   
   assign( ct.yr[ i ], readRDS( dir()[i] ) )
   
@@ -62,37 +57,79 @@ for (i in 1:length( dir( ) ) ) {
 }
 
 
+
 ## Read in cumulative county Dorling Cartogram data/shapefile
 
 setwd( paste0( main, "np-density-dashboard/Data-Rodeo" ) )
+
 cnties.dorling <- readRDS( "Dashboard-County-Data/Dorling-Shapefiles/USA-Counties-Dorling.rds" )
+
+## Read-in yearly data for county Leaflets
+setwd( "Dashboard-County-Data/Dorling-Shapefiles/Dorling-By-Year" )
+
+for (i in 1:length( dir( ) ) ) {
+  
+  ct.yr.d <- paste0( 'cnties.dorling.', 2014:2021 )
+  
+  assign( ct.yr.d[ i ], readRDS( dir()[i] ) )
+  
+  
+}
 
 
 ### Plotting Functions ###
 
 # landing page chloropleths
 lp.plot.chloro <- function( df ){
-  ggplot( ) + geom_sf( df,
+  
+  # there are issues binning variables with high quantitites of zero values. Thus,
+  # we will separate the zero and non-zero values of the metrics into separate datasets, bin them separately
+  # and then row bind them back together for the final plot:
+  df.zeros <- df[df$dens == 0, ] # metric = 0
+  df.zeros$dens.q <- 0           # assign value of zero for the ordinal variable
+  
+  df.nonzeros <- df[df$dens != 0,] # metric != 0
+  df.nonzeros$dens.q <- factor( quant.cut( var = 'dens', x = 6 , df = df.nonzeros ) ) # bin into 6 
+  # ordinal categories
+
+  df.out <- rbind( df.zeros, df.nonzeros)  # bind
+  df.out$dens.q <- factor( df.out$dens.q ) # set to factor
+  
+  ggplot( ) + geom_sf( df.out,             # plot
                              mapping = aes( fill = dens.q ),
                              color = NA, size = 0.5 ) +
-    scale_fill_brewer( "Quantile", palette = 1 ) +
+    scale_fill_brewer( "Density Scale", palette = 1 ) +
     theme_minimal( ) +
-    theme( text = element_text( family = "Helvetica Light" ) )
+    theme( text = element_text( family = "Avenir" ) )
+  
 }
 
 # landing page Dorling Cartograms
 lp.plot.dorling <- function( df ){
   
+  # there are issues binning variables with high quantitites of zero values. Thus,
+  # we will separate the zero and non-zero values of the metrics into separate datasets, bin them separately
+  # and then row bind them back together for the final plot:
+  df.zeros <- df[df$dens == 0, ] # metric = 0
+  df.zeros$dens.q <- 0           # assign value of zero for the ordinal variable
+  
+  df.nonzeros <- df[df$dens != 0,] # metric != 0
+  df.nonzeros$dens.q <- factor( quant.cut( var = 'dens', x = 6 , df = df.nonzeros ) ) # bin into 6 
+  # ordinal categories
+  
+  df.out <- rbind( df.zeros, df.nonzeros)  # bind
+  df.out$dens.q <- factor( df.out$dens.q ) # set to factor
+  
   df$dens.q <- factor( quant.cut( var = 'dens', x = 7 ,df = df ) )
     
   ggplot(  )  +
     geom_sf( df, mapping = aes( fill = dens.q ),  color = NA ) +
-    scale_fill_brewer( "Quantile", palette = 1 ) +
+    scale_fill_brewer( "Density Scale", palette = 1 ) +
     theme_minimal( ) +
-    theme( text = element_text( family = "Helvetica Light" ) )
+    theme( text = element_text( family = "Avenir" ) )
 }
 
-# landing page interactiveLeaflet
+# landing page interactive Leaflet
 
 lp.plot.leaf <- function( df ){
   
@@ -103,6 +140,32 @@ lp.plot.leaf <- function( df ){
     setView(-98.35, 39.50, zoom = 3.499)
   
 }
+
+# landing page histograms
+
+lp.plot.hist <- function( df ){
+  
+  ggplot( df, aes( x = n ) )+
+    geom_histogram( color="darkblue", fill="lightblue", bins = 40 ) +
+    theme_minimal()+
+    ylab( "Frequency") +
+    xlab( "# New Nonprofits per County")+
+    ggtitle( "Distribution of County Nonprofits")+
+    theme( text = element_text( family = "Avenir") )
+  
+}
+
+# landing page summary stats
+lp.tbl <- function( df ){
+  round( data.frame( Mean = mean( df$n, na.rm = T),
+                     Median = median( df$n, na.rm = T),
+                     Min = min( df$n, na.rm = T),
+                     Max = max( df$n, na.rm = T),
+                     Variance = var( df$n, na.rm = T),
+                     SD = sd( df$n, na.rm = T) ), digits = 2 )
+  
+}
+
 
 # USER INTERFACE
 ui <- bootstrapPage(
@@ -127,8 +190,12 @@ ui <- bootstrapPage(
                       
                       mainPanel(
                         tabsetPanel(
-                          tabPanel("Chloropleth", plotOutput("lp.1") ),
-                          tabPanel( "Dorling Cartogram", plotOutput( "lp.2" ) ),
+                          tabPanel("Chloropleth", fluidRow( plotOutput("lp.1", width="90%", height = 400), 
+                                                            plotOutput("lp.h.1", width = "90%", height = 200),
+                                                            tableOutput( "lp.t.1" ) ) ),
+                          tabPanel( "Dorling Cartogram", fluidRow( plotOutput("lp.2", width="90%", height = 400), 
+                                                                   plotOutput("lp.h.2", width = "90%", height = 200),
+                                                                   tableOutput( "lp.t.2" ) ) ) ,
                           tabPanel( "Interactive Leaflet", leafletOutput("lp.3"),
                                     p() ) )
                         )
@@ -150,28 +217,28 @@ server <- function( input, output ) {
     cnties
   }
       else if(input$yr_select=="2014") {
-    cnties2014
+    cnties.2014
   }
       else if(input$yr_select=="2015") {
-      cnties2015
+      cnties.2015
     }
       else if(input$yr_select=="2016") {
-      cnties2016
+      cnties.2016
     }
       else  if(input$yr_select=="2017") {
-      cnties2017
+      cnties.2017
     }
       else   if(input$yr_select=="2018") {
-      cnties2018
+      cnties.2018
     }
       else   if(input$yr_select=="2019") {
-      cnties2019
+      cnties.2019
     }
       else    if(input$yr_select=="2020") {
-      cnties2020
+      cnties.2020
     }
       else  if(input$yr_select=="2021") {
-      cnties2021
+      cnties.2021
     }
   }
   
@@ -183,28 +250,28 @@ server <- function( input, output ) {
         cnties.dorling
       }
       else if(input$yr_select=="2014") {
-        cnties.dorling
+        cnties.dorling.2014
       }
       else if(input$yr_select=="2015") {
-        cnties.dorling
+        cnties.dorling.2015
       }
       else if(input$yr_select=="2016") {
-        cnties.dorling
+        cnties.dorling.2016
       }
       else  if(input$yr_select=="2017") {
-        cnties.dorling
+        cnties.dorling.2017
       }
       else   if(input$yr_select=="2018") {
-        cnties.dorling
+        cnties.dorling.2018
       }
       else   if(input$yr_select=="2019") {
-        cnties.dorling
+        cnties.dorling.2019
       }
       else    if(input$yr_select=="2020") {
-        cnties.dorling
+        cnties.dorling.2020
       }
       else  if(input$yr_select=="2021") {
-        cnties.dorling
+        cnties.dorling.2021
       }
     }
   )
@@ -241,12 +308,19 @@ server <- function( input, output ) {
       }
   )
   
-
+# County plots on landing page
   output$lp.1 <- renderPlot( lp.plot.chloro( year.reactive.df.chloro() ) )
   output$lp.2 <- renderPlot( lp.plot.dorling( year.reactive.df.dorling() ) )
   output$lp.3 <- renderLeaflet( lp.plot.leaf( year.reactive.df.leaflet() ) )
-}
+  
+# histograms
+  output$lp.h.1 <- renderPlot( lp.plot.hist( year.reactive.df.chloro() ) )
+  output$lp.h.2 <- renderPlot( lp.plot.hist( year.reactive.df.dorling() ) )
 
+  # tables
+  output$lp.t.1 <- renderTable( lp.tbl( year.reactive.df.chloro() ) )
+  output$lp.t.2 <- renderTable( lp.tbl( year.reactive.df.dorling() ) )
+}
 
 shinyApp( ui, server )
 

@@ -233,6 +233,9 @@ for ( i in 1:length( msa.file ) ) {
   
 }
 
+
+# --------------------------------------------------------------------------------------------------------
+
 ## US Counties datasets
 
 # obtain county geometries from `urbanmapr`
@@ -267,11 +270,18 @@ setwd( "Dashboard-County-Data" )
 
 saveRDS( ct, "USA-Counties.rds")
 
+# --------------------------------------------------------------------------------------------------------
 
+
+
+
+
+
+# --------------------------------------------------------------------------------------------------------
 
 ## Counties Dorling Cartogram
 
-ct.sf <- counties( cb=T ) %>%
+ct.sf.tigris <- counties( cb=T ) %>%
   shift_geometry(  ) %>%      # shift and rescale HI, AK, and PR
   transform( crs = 3395 )    # project counties sf to compatible crs
 
@@ -279,26 +289,27 @@ ct.sf <- counties( cb=T ) %>%
 # no. of NPOs by county 5-digit FIPS in the NPO dataset
 n.ct <- npo %>%
   group_by( fips.ct ) %>%
-  mutate( n = ifelse( is.na( n() ) ==T, 0, n( ) ) ) %>% # count of NPO's within county FIPS
+  mutate( n = ifelse( is.na( n() ) ==T, 0, n( ) ) ) %>% # count of NPO's within county FIPS, if no rows for a county are detected, they are assigned 0 NPOs
   distinct( fips.ct, n ) 
+# we should have 3186 counties in this dataset with no missing in the `n` column
 
-
-# county population query and merge
+# county population query from ACS
 pop.ct <- get_acs( geography = "county", 
                    variables = "B01003_001" ) %>%   # TOTAL_POPULATION
   select( fips.ct = GEOID, pop = estimate )    # select and rename
 
 
 # merge ACS data to NPO data where rows are counties identified by their 5-digit FIPS codes
-dat <- st_as_sf( pop.ct %>%
-                   mutate( fips.ct =  fips.ct  ) %>%
-                   left_join( n.ct, . ) %>%
-                   mutate( dens = ( n / pop ) * 1000 ) %>%
-                   mutate( pop.w = pop /  min( pop.ct$pop, na.rm=T ) ) %>%   # ctandardizes it to max of 1.5
-                   left_join( ., ct.sf, by = c( "fips.ct" = 'GEOID') ) ) %>%
+dat <-  left_join( ct.sf.tigris, n.ct, by = c( "GEOID" = 'fips.ct') ) %>% # join count data to `tigris` shapefile
+  rename( fips.ct = GEOID ) %>%             # rename identifier
+  left_join(., pop.ct, by='fips.ct') %>%    # join to Census data
+  mutate( n = ifelse( is.na( n )==T, 0, n ) ) %>%     # if a county has NA in its count of NPOs, it is because it was not present in the 1023-EZ data for that given year, meaning there were no filers in that county...thus, zero NPOs
+  mutate( dens = ( n / pop ) * 1000 ) %>%           # calculate density metric
+  mutate( pop.w = pop /  max( pop.ct$pop, na.rm=T ) ) %>%   # standardizes it
   st_transform( crs = 3395 ) %>%
-  filter( is.na( pop.w )==F ) # remove FIPS in Guam, VI, and some Alaska counties without population estimates
-# `cartogram_dorling` function will break if there are missing values in the weight parameter
+  filter( is.na( pop.w )==F )  # remove FIPS in Guam, VI, and some Alaska counties without population estimates
+# `cartogram_dorling` function will break if there are missing values in the weight parameter.
+# no. of rows in this dataset should be ~3234 (one for each county in the US--actually around 3221 since we removed territories)
 
 ct.dorling <- cartogram_dorling( x = dat, weight = "pop.w" , k = 0.8 )  # k parameter was increased to augment circle size
 
@@ -307,8 +318,12 @@ ct.dorling <- cartogram_dorling( x = dat, weight = "pop.w" , k = 0.8 )  # k para
 setwd( "Dorling-Shapefiles" )
 
 saveRDS( ct.dorling, "USA-Counties-Dorling.rds")
+# --------------------------------------------------------------------------------------------------------
 
 
+
+
+# --------------------------------------------------------------------------------------------------------
 
 ## Nonprofits by year shapefiles/data
 
@@ -318,7 +333,7 @@ setwd("../np-density-dashboard/Data-Rodeo/Dashboard-County-Data/")
 
 yr.levels <- levels( factor( npo$YR ) )
 
- ct.sf <- get_urbn_map( map = "counties", sf = TRUE ) %>%
+ ct.sf.urbn <- get_urbn_map( map = "counties", sf = TRUE ) %>%
    st_transform( crs = 3395 )%>%
    rename( fips.ct = county_fips ) %>%
    left_join(., ( get_acs( geography = "county", 
@@ -338,11 +353,11 @@ for(i in 1: length( yr.levels ) ) {
   distinct( fips.ct, n, YR )
   
   ( ct <- 
-      left_join( ct.sf, n.ct.yr ) %>%
+      left_join( ct.sf.urbn, n.ct.yr ) %>%
       st_transform( crs = 3395 ) %>%
     mutate( n = ifelse( is.na( n )==T, 0, n) )  %>%            # fix NAs for counties without new NPOs
-    mutate( dens = ( n / pop )* 1000 )%>%
-    mutate( dens.q = factor( quant.cut( var = 'dens', x = 7 ,df = . ) ) ) ) %>%
+    mutate( dens = ( n / pop )* 1000 ) )%>%
+    filter( is.na( pop )==F )
 
     saveRDS( paste0( "USA-Counties-", yr.levels[i],".rds") )
   
@@ -353,11 +368,80 @@ for(i in 1: length( yr.levels ) ) {
   
   
 }
+ # --------------------------------------------------------------------------------------------------------
+ 
+ 
+ 
+ 
+ 
+ # --------------------------------------------------------------------------------------------------------
+ 
+## Nonprofits by year shapefiles/data (Dorling Cartograms)
+
+ 
+ # NEED TO RUN THIS PRIOR TO LOOP:
+ #
+ # yr.levels <- levels( factor( npo$YR ) )
+ # lines 284-286
+ # ct.sf.tigris <- counties( cb=T ) %>%
+ #   shift_geometry(  ) %>%      # shift and rescale HI, AK, and PR
+ #   transform( crs = 3395 )    # project counties sf to compatible crs
+ #
+ # lines 297-299
+ # county population query and merge
+ # pop.ct <- get_acs( geography = "county", 
+ #                    variables = "B01003_001" ) %>%   # TOTAL_POPULATION
+ #   select( fips.ct = GEOID, pop = estimate )    # select and rename
+ 
+ setwd( lf )
+ setwd("../np-density-dashboard/Data-Rodeo/Dashboard-County-Data/Dorling-Shapefiles")
+ # dir.create( "Dorling-By-Year" )
+ setwd( "Dorling-By-Year" )
+ 
+for( i in 1:length( yr.levels ) ) {
+  
+  start.time <- Sys.time()
+  
+ # no. of NPOs by county 5-digit FIPS in the NPO dataset
+ n.ct <- npo %>%
+   filter( YR == yr.levels[i] ) %>%                       # filter by year
+   group_by( fips.ct ) %>%
+   mutate( n = ifelse( is.na( n() ) ==T, 0, n( ) ) ) %>% # count of NPO's within county FIPS
+   distinct( fips.ct, n, YR )
+ # no. of rows in this data should reflect the number of counties for which we have data for
+ # i.e., less than 3142 counties in the USA since there weren't filers in every county
+ 
+ # merge ACS data to NPO data where rows are counties identified by their 5-digit FIPS codes
+
+ dat.yr <-  left_join( ct.sf.tigris, n.ct, by = c( "GEOID" = 'fips.ct') ) %>% # join count data to `tigris` shapefile
+   rename( fips.ct = GEOID ) %>%             # rename identifier
+   left_join(., pop.ct, by='fips.ct') %>%    # join to Census data
+   mutate( n = ifelse( is.na( n )==T, 0, n ) ) %>%     # if a county has NA in its count of NPOs, it is because it was not present in the 1023-EZ data for that given year, meaning there were no filers in that county...thus, zero NPOs
+     mutate( dens = ( n / pop ) * 1000 ) %>%           # calculate density metric
+     mutate( pop.w = pop /  max( pop.ct$pop, na.rm=T ) ) %>%   # standardizes it
+   st_transform( crs = 3395 ) %>%
+   filter( is.na( pop.w )==F )  # remove FIPS in Guam, VI, and some Alaska counties without population estimates
+ # `cartogram_dorling` function will break if there are missing values in the weight parameter.
+ # no. of rows in this dataset should be ~3234 (one for each county in the US)
+ 
+ yr.dorling <- cartogram_dorling( x = dat.yr, weight = "pop.w" , k = 0.8 )  # k parameter was increased to augment circle size
+ 
+
+ saveRDS( yr.dorling, paste0("USA-Counties-Dorling-", c( 2014:2021 )[i],".rds" ) )
+ 
+ end.time <- Sys.time()
+ 
+ print( end.time - start.time)
+ print( paste0( "Iteration ", i, "/", length( yr.levels ), " complete" ) ) 
+}
+# --------------------------------------------------------------------------------------------------------
 
  
  
 
-## Shapefile for Leaflet Maps
+ 
+# --------------------------------------------------------------------------------------------------------
+## Shapefiles for Leaflet Maps
  
 ## Cumulative county data
  
@@ -419,6 +503,7 @@ cnties <- readRDS( "USA-Counties.rds" )
     print( end.time - start.time)
     print( paste0( "Iteration ", i, "/", length( dir() ), " complete" ) ) 
   }
+# --------------------------------------------------------------------------------------------------------
  
  
  
