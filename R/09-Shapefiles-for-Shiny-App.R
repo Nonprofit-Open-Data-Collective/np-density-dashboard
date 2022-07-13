@@ -41,6 +41,12 @@ setwd( lf )
 # data containing NPO coordinates as points
 npo <- readRDS( 'NONPROFITS-2014-2021v7.rds' )
 
+
+
+# --------------------------------------------------------------------------------------------------------
+
+## Metropolitan Statistical Areas (MSAs) Shapefiles and Dorling  Cartogram Shapefiles
+
 # convert lat/long to a sf
 npo.sf <- npo %>%
   filter( is.na( lat ) == F ) %>% # st_as_sf does not allow missing values in coordinate columns; n = 167 missing
@@ -233,6 +239,11 @@ for ( i in 1:length( msa.file ) ) {
   
 }
 
+# --------------------------------------------------------------------------------------------------------
+
+
+
+
 
 # --------------------------------------------------------------------------------------------------------
 
@@ -257,7 +268,8 @@ n.ct <- npo %>%
     st_transform( crs = 3395 ) %>%
     mutate( n = ifelse( is.na( n )==T, 0, n) )  %>%            # fix NAs for counties without new NPOs
   mutate( dens = ( n / pop )* 1000 ) %>%
-  mutate( dens.q = factor( quant.cut( var = 'dens', x = 7 ,df = . ) ) ) )
+  mutate( dens.q = factor( quant.cut( var = 'dens', x = 7 ,df = . ) ) ) %>%
+    filter( is.na( dens )==F ))
   
 
 ## generate final county file and save
@@ -357,9 +369,9 @@ for(i in 1: length( yr.levels ) ) {
       st_transform( crs = 3395 ) %>%
     mutate( n = ifelse( is.na( n )==T, 0, n) )  %>%            # fix NAs for counties without new NPOs
     mutate( dens = ( n / pop )* 1000 ) )%>%
-    filter( is.na( pop )==F )
+    filter( is.na( dens )==F )
 
-    saveRDS( paste0( "USA-Counties-", yr.levels[i],".rds") )
+    saveRDS( ct, paste0( "USA-Counties-", yr.levels[i],".rds") )
   
   end.time <- Sys.time()
   

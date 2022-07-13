@@ -143,9 +143,9 @@ lp.plot.leaf <- function( df ){
 
 # landing page histograms
 
-lp.plot.hist <- function( df ){
+lp.plot.hist <- function( df ) {
   
-  ggplot( df, aes( x = n ) )+
+  ggplot( df, aes( x = n ) ) +
     geom_histogram( color="darkblue", fill="lightblue", bins = 40 ) +
     theme_minimal()+
     ylab( "Frequency") +
@@ -156,7 +156,7 @@ lp.plot.hist <- function( df ){
 }
 
 # landing page summary stats
-lp.tbl <- function( df ){
+lp.tbl <- function( df ) {
   round( data.frame( Mean = mean( df$n, na.rm = T),
                      Median = median( df$n, na.rm = T),
                      Min = min( df$n, na.rm = T),
@@ -179,31 +179,45 @@ ui <- bootstrapPage(
                       
                       sidebarLayout(
                         sidebarPanel(
-                          span( div( img(src="https://lh3.googleusercontent.com/k-BWWGuT_48sXsGlq0mwVDWbo0nFO7me3F4sVcAeJjB-mWsYJlhVm4HEO5iL1moxc5hKYwG6ZYCPxVw9FxLf0vuOSQN2rq3DGEgjdvJMMHaiWnZMqOouKaZiRd8qQHJn3vEn7LPQUL3ZziwRsboOcsGiRLevWAIULQ_4FtENb_e6gmBKAvciUz9-CR0RCISXWtRrbP3yRXwes64LmfYoPAZrrXb0pSReSLbkLAa5hAWmeuFONK25CticLz3Q3FzTSO7ovW342EuU3KwXkjTyMx-6NuZ2TBzLltA9Ott2X_RJUNUbvfXub58i_C6_MXb70RpFZJETHkiDxOdD2p7-cFFZA7owQJrMIOIr-Q_cDDqfbYgfxN4ahn6fU0MtCrcE9cz8xeKBkj4jRVgUdnuI8IpvxW-eQABhC9pE0yfSUMTimAeNYx860x4I51uYO_Fspn7VTn0hhV-FnLSz7YtjVEVyPGE4o89bWQ6IR4-Ls0VAAUhwZlm8-HjMuZQgXhNwjMwd-SKYKaM7F0MKLQ-kd74Sz01ZMy1b4ZYl3_88dPYQeAWFuFtsO3WE5deftuI-6qaqu7cKyvZRMJYav778gIcB6Pb4PUNa9C4EjHfF74aMreOowGdwnLjAIrognCeq_im_sjKCzA-TRIzrHZbgO8p3bJXuyiCizpC2dWWkv9RdcS1VYYmTsAMe7RVFG8v0EVofotjxCye84drStb2cTiZaEirD6h8-uKLN9-8cMHaLwRc620Jwa5ob0Il0mNq7psmGd5xcnZ30paL_snsi4SYEMLfKrTeT=s1000-no?authuser=0",
+                          span( div( img(src="output-onlineimagetools(2).png",
                                        height="45%", width="90%", align="center" ) ) ),
                           
-                          pickerInput("yr_select", "Year:",   
+                          pickerInput( "yr_select", "Year:",   
                                       choices = c("Cumulative: 2014-2021", "2014", "2015", "2016", "2017", "2018", 
                                                   "2019", "2020", "2021" ), 
                                       selected = c("Cumulative: 2014-2021" ),
-                                      multiple = FALSE) ) ,
+                                      multiple = FALSE),
+                          
+                          radioButtons( "ptype", "Plot Type:",
+                                        c( "Chloropleth" = "chloro",
+                                        "Dorling Cartogram" = "dorling") ) ),
                       
-                      mainPanel(
-                        tabsetPanel(
-                          tabPanel("Chloropleth", fluidRow( plotOutput("lp.1", width="90%", height = 400), 
-                                                            plotOutput("lp.h.1", width = "90%", height = 200),
-                                                            tableOutput( "lp.t.1" ) ) ),
-                          tabPanel( "Dorling Cartogram", fluidRow( plotOutput("lp.2", width="90%", height = 400), 
-                                                                   plotOutput("lp.h.2", width = "90%", height = 200),
-                                                                   tableOutput( "lp.t.2" ) ) ) ,
-                          tabPanel( "Interactive Leaflet", leafletOutput("lp.3"),
-                                    p() ) )
-                        )
+                      mainPanel( plotOutput( "ptype" , width = "90%", height = 400),
+                                 plotOutput( "lp.h.1" ,width = "90%", height = 200),
+                                 tableOutput( "lp.t.1" ) )
+                      
                       )
              )
-  )
+  ),
+  
+  tabPanel("Interactive Leaflet Map",
+           div(class="outer",
+               tags$head(includeCSS("/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/np-density-dashboard/R/Nonprofit-Density/styles.css")),
+               
+               sidebarLayout(
+                 sidebarPanel(
+                   span( div( img(src="output-onlineimagetools(2).png",
+                                  height="45%", width="90%", align="center" ) ) ) ),
+                   
+                   mainPanel( leafletOutput( "lp.3" ) )
+                   
 )
 )
+)
+)
+)
+
+  
   
 
 # SERVER
@@ -308,6 +322,18 @@ server <- function( input, output ) {
       }
   )
   
+    # Radio button for plot type
+    output$ptype <- renderPlot( {
+      switch(input$ptype,
+                     "chloro" = lp.plot.chloro( year.reactive.df.chloro() ),
+                     "dorling" = lp.plot.chloro( year.reactive.df.dorling() ) )
+    }
+
+)
+
+
+    
+    reactive
 # County plots on landing page
   output$lp.1 <- renderPlot( lp.plot.chloro( year.reactive.df.chloro() ) )
   output$lp.2 <- renderPlot( lp.plot.dorling( year.reactive.df.dorling() ) )
@@ -315,11 +341,9 @@ server <- function( input, output ) {
   
 # histograms
   output$lp.h.1 <- renderPlot( lp.plot.hist( year.reactive.df.chloro() ) )
-  output$lp.h.2 <- renderPlot( lp.plot.hist( year.reactive.df.dorling() ) )
 
   # tables
   output$lp.t.1 <- renderTable( lp.tbl( year.reactive.df.chloro() ) )
-  output$lp.t.2 <- renderTable( lp.tbl( year.reactive.df.dorling() ) )
 }
 
 shinyApp( ui, server )
