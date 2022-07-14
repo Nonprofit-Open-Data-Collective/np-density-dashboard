@@ -80,23 +80,24 @@ for (i in 1:length( dir( ) ) ) {
 ### Plotting Functions ###
 
 # landing page chloropleths
-lp.plot.chloro <- function( df, input ){
+lp.plot <- function( df, input ){
   
   # there are issues binning variables with high quantitites of zero values. Thus,
   # we will separate the zero and non-zero values of the metrics into separate datasets, bin them separately
   # and then row bind them back together for the final plot:
-  df.zeros <- df[df$dens == 0, ] # metric = 0
-  df.zeros$dens.q <- 0           # assign value of zero for the ordinal variable
+  df.zeros <- df[ df[[ input ]] == 0, ] # metric = 0
+  df.zeros[[ paste0( input, ".q" ) ]]<- 0           # assign value of zero for the ordinal variable
   
-  df.nonzeros <- df[df$dens != 0,] # metric != 0
-  df.nonzeros$dens.q <- factor( quant.cut( var = 'dens', x = 6 , df = df.nonzeros ) ) # bin into 6 
+  df.nonzeros <- df[ df[[ input ]] != 0, ] # metric != 0
+  df.nonzeros[[ paste0( input, ".q" ) ]]<- factor( quant.cut( var = input, x = 6 , df = df.nonzeros ) ) # bin into 6 
   # ordinal categories
-
+  
   df.out <- rbind( df.zeros, df.nonzeros)  # bind
-  df.out$dens.q <- factor( df.out$dens.q ) # set to factor
+  df.out[[ paste0( input, ".q" ) ]]<- factor( df.out[[ paste0( input, ".q" ) ]] ) # set to factor
+  
   
   ggplot( ) + geom_sf( df.out,             # plot
-                             mapping = aes_string( fill = input ),
+                             mapping = aes_string( fill = paste0( input, ".q" ) ),
                              color = NA, size = 0.5 ) +
     scale_fill_brewer( "Density Scale", palette = 1 ) +
     theme_minimal( ) +
@@ -110,10 +111,10 @@ lp.plot.dorling <- function( df, input ){
   # there are issues binning variables with high quantitites of zero values. Thus,
   # we will separate the zero and non-zero values of the metrics into separate datasets, bin them separately
   # and then row bind them back together for the final plot:
-  df.zeros <- df[df$dens == 0, ] # metric = 0
+  df.zeros <- df[ df[[ input ]] == 0, ] # metric = 0
   df.zeros$dens.q <- 0           # assign value of zero for the ordinal variable
   
-  df.nonzeros <- df[df$dens != 0,] # metric != 0
+  df.nonzeros <- df[ df[[ input ]] != 0, ] # metric != 0
   df.nonzeros$dens.q <- factor( quant.cut( var = 'dens', x = 6 , df = df.nonzeros ) ) # bin into 6 
   # ordinal categories
   
@@ -135,9 +136,9 @@ lp.plot.leaf <- function( df ){
   
   leaflet(df) %>% 
     addTiles() %>%
-    addPolygons(color = "#444444", weight = 1, smoothFactor = 0.5,
-                opacity = 1.0, fillOpacity = 0.5, popup = ~as.character(popup) ) %>%
-    setView(-98.35, 39.50, zoom = 3.499)
+    addPolygons( color = "#444444", weight = 1, smoothFactor = 0.5,
+                opacity = 1.0, fillOpacity = 0.5, popup = ~as.character( popup ) ) %>%
+    setView( -98.35, 39.50, zoom = 3.499 )
   
 }
 
@@ -167,7 +168,7 @@ lp.tbl <- function( df, input ) {
 }
 
 
-# USER INTERFACE
+## USER INTERFACE
 ui <- bootstrapPage(
   navbarPage(theme = shinytheme( "flatly" ), collapsible = TRUE,
              
@@ -225,7 +226,7 @@ ui <- bootstrapPage(
   
   
 
-# SERVER
+## SERVER
 server <- function( input, output ) { 
   
   
@@ -336,11 +337,14 @@ metric.reactive <- reactive({
   }
 })
 
-  # reactive for chloropleth variable selector
+## reactive for chloropleth variable selector
+# values should the continuous variables in the dataset. The plotting function automatically
+# bins the variable into 7 categories, including a separate bin for zeros
+
 
 metric.reactive.b <- reactive({
   if (input$metric =='Density'){
-    "dens.q"
+    "dens"
   }
 })
 
@@ -351,8 +355,8 @@ metric.reactive.b <- reactive({
 # Radio button for plot type
 output$ptype <- renderPlot( {
   switch(input$ptype,
-         "chloro" = lp.plot.chloro( df = year.reactive.df.chloro(), input = metric.reactive.b() ),
-         "dorling" = lp.plot.dorling( df = year.reactive.df.dorling(), input = metric.reactive.b() ) )
+         "chloro" = lp.plot( df = year.reactive.df.chloro(), input = metric.reactive.b() ),
+         "dorling" = lp.plot( df = year.reactive.df.dorling(), input = metric.reactive.b() ) )
 }
 
 )
