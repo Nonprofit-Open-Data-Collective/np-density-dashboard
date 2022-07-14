@@ -27,7 +27,7 @@ main <- "/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial
 p <- paste0( "USA-Counties" )
 ct <- paste0( main, "np-density-dashboard/Data-Rodeo/Dashboard-County-Data" )
 setwd( ct )
-assign( "cnties", readRDS( paste0( p, ".rds") ) )
+assign( "cnties.", readRDS( paste0( p, ".rds") ) )
 
 # yearly std projection files
 setwd( "By-Year")
@@ -42,7 +42,7 @@ for ( i in 1:length( yrs ) ){
 
 # main Dorling Cartogram file
 setwd( "../Dorling-Shapefiles" )
-assign( "cnties.dorling", readRDS( paste0( p,"-Dorling", ".rds") ) )
+assign( "cnties.dorling.", readRDS( paste0( p,"-Dorling", ".rds") ) )
 
 # yearly Dorling Cartogram files
 setwd( "Dorling-By-Year")
@@ -72,7 +72,7 @@ for ( i in 1:length( yrs ) ){
 ### Plotting Functions ###
 
 # landing page chloropleths
-lp.plot.chloro <- function( df, input ){
+lp.plot <- function( df, input ){
   
   # there are issues binning variables with high quantitites of zero values. Thus,
   # we will separate the zero and non-zero values of the metrics into separate datasets, bin them separately
@@ -95,31 +95,6 @@ lp.plot.chloro <- function( df, input ){
     theme_minimal( ) +
     theme( text = element_text( family = "Avenir" ) )
   
-}
-
-# landing page Dorling Cartograms
-lp.plot.dorling <- function( df, input ){
-  
-  # there are issues binning variables with high quantitites of zero values. Thus,
-  # we will separate the zero and non-zero values of the metrics into separate datasets, bin them separately
-  # and then row bind them back together for the final plot:
-  df.zeros <- df[ df[[ input ]] == 0, ] # metric = 0
-  df.zeros$dens.q <- 0           # assign value of zero for the ordinal variable
-  
-  df.nonzeros <- df[ df[[ input ]] != 0, ] # metric != 0
-  df.nonzeros$dens.q <- factor( quant.cut( var = 'dens', x = 6 , df = df.nonzeros ) ) # bin into 6 
-  # ordinal categories
-  
-  df.out <- rbind( df.zeros, df.nonzeros)  # bind
-  df.out$dens.q <- factor( df.out$dens.q ) # set to factor
-  
-  df$dens.q <- factor( quant.cut( var = 'dens', x = 7 ,df = df ) )
-  
-  ggplot(  )  +
-    geom_sf( df, mapping = aes_string( fill = input ),  color = NA ) +
-    scale_fill_brewer( "Density Scale", palette = 1 ) +
-    theme_minimal( ) +
-    theme( text = element_text( family = "Avenir" ) )
 }
 
 # landing page interactive Leaflet
