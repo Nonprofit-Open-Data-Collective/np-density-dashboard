@@ -306,7 +306,7 @@ saveRDS( ct, "USA-Counties.rds")
 
 # --------------------------------------------------------------------------------------------------------
 
-## Append Yearly County Data
+## Append Yearly County NPO Data To USA-Counties Dataset/Shapefile
 
 setwd( lf )
 setwd("../np-density-dashboard/Data-Rodeo/Dashboard-County-Data/")
@@ -348,6 +348,27 @@ for(i in 1: length( yr.levels ) ) {
   
   
 }
+
+# now put into long format and save final version
+setwd( lf )
+setwd("../np-density-dashboard/Data-Rodeo/Dashboard-County-Data/")
+
+st_as_sf( st_drop_geometry( ct ) %>% 
+                      select( fips.ct, starts_with( "n.") )%>%                     # pivot on count columns only
+                      pivot_longer( cols = !fips.ct, 
+                                    names_to = 'year', 
+                                    names_prefix = "n.", 
+                                    values_to = "n" ) %>%
+                      left_join(., st_drop_geometry( ct ) %>%                      # join the long format density and count tables
+                                  select( fips.ct, starts_with( "dens.") )%>%      # pivot on density columns only
+                                  pivot_longer( cols = !fips.ct, 
+                                                names_to = 'year', 
+                                                names_prefix = "dens.", 
+                                                values_to = "dens" ) ) %>%
+                      left_join(., ct%>% select( !starts_with( "n" ) & !starts_with( "dens" ) ),
+                                by = "fips.ct") ) %>%
+  saveRDS( "USA-Counties.rds" )
+
 # --------------------------------------------------------------------------------------------------------
 
 
@@ -405,24 +426,12 @@ saveRDS( ct.dorling, "USA-Counties-Dorling.rds")
  
  # --------------------------------------------------------------------------------------------------------
  
-## Yearly County shapefiles/data (Dorling Cartograms)
+##  Append Yearly County NPO Data To USA-Counties Dorling Cartogram Dataset/Shapefile
 
  
  # NEED TO RUN THIS PRIOR TO LOOP:
  #
  # yr.levels <- levels( factor( npo$YR ) )
- # lines 284-286
- # ct.sf.tigris <- counties( cb=T ) %>%
- #   shift_geometry(  ) %>%      # shift and rescale HI, AK, and PR
- #   transform( crs = 3395 )    # project counties sf to compatible crs
- #
- # lines 297-299
- # county population query and merge
- # pop.ct <- get_acs( geography = "county", 
- #                    variables = "B01003_001" ) %>%   # TOTAL_POPULATION
- #   select( fips.ct = GEOID, pop = estimate )    # select and rename
- #
- # This section will take quite a while depending on your machine. Suggest running overnight.
  
  setwd( lf )
  setwd("../np-density-dashboard/Data-Rodeo/Dashboard-County-Data/Dorling-Shapefiles")
@@ -461,6 +470,28 @@ for( i in 1:length( yr.levels ) ) {
  print( end.time - start.time)
  print( paste0( "Iteration ", i, "/", length( yr.levels ), " complete" ) ) 
 }
+ 
+ # now put into long format and save final version
+ setwd( lf )
+ setwd("../np-density-dashboard/Data-Rodeo/Dashboard-County-Data/Dorling-Shapefiles")
+ 
+yr.out <- st_as_sf( st_drop_geometry( ds ) %>% 
+  select( fips.ct, starts_with( "n.") )%>%                     # pivot on count columns only
+  pivot_longer( cols = !fips.ct, 
+                     names_to = 'year', 
+                     names_prefix = "n.", 
+                     values_to = "n" ) %>%
+  left_join(., st_drop_geometry( ds ) %>%                      # join the long format density and count tables
+              select( fips.ct, starts_with( "dens.") )%>%      # pivot on density columns only
+              pivot_longer( cols = !fips.ct, 
+                            names_to = 'year', 
+                            names_prefix = "dens.", 
+                            values_to = "dens" ) ) %>%
+  left_join(., ds%>% select( !starts_with( "n" ) & !starts_with( "dens" ) ),
+            by = "fips.ct") ) %>%
+  saveRDS( "USA-Counties-Dorling.rds" )
+
+
 # --------------------------------------------------------------------------------------------------------
 
  
@@ -565,20 +596,9 @@ for ( i in 1:length( yr.levels ) ) {
 
  
  
- 
- 
- 
- 
- 
- 
- 
- 
-
- 
 # --------------------------------------------------------------------------------------------------------
-## Shapefiles for Leaflet Maps
- 
-## Cumulative county data
+
+## Create Dataset/Shapefile for Leaflet Map with Popup Message for each County
  
 setwd( lf )
  
@@ -587,58 +607,26 @@ cnties <- readRDS( "USA-Counties.rds" )
  
 # Cumulative County Map (2014-2021)
 
- ct.leaf <- counties( cb = T) %>%
-   left_join(., 
-             data.frame( cnties ) %>% select( fips.ct, n, dens ) 
-             , by = c( "GEOID" = "fips.ct" ) ) %>% # join Tigris county map to county data
-   
-   mutate( dens = round( dens, digits = 2 ), # round density metric to keep tidy on Leaflet popup
-           popup = paste(sep = "<br/>",      # create popup script for Leaflet map
-                         paste0("<b>",NAMELSAD,", ", STUSPS, "</b>"),
-                         paste0( "<i># New Nonprofits<i>: ", n ),
-                         paste0( "<i>Density New Nonprofits<i>: ", dens, " nonprofits / 1,000 inhabitants" ) ) )
- 
- 
- # dir.create( "Leaflet-Shapefiles")
- setwd( "Leaflet-Shapefiles" )
- saveRDS( ct.leaf, "USA-Counties-Leaflet.rds")
- 
- # Now, create county leaflet maps by year which will summarize new nonprofits per year
- # dir.create( "Leaflet-By-Year" )
- 
- setwd("../By-Year")
+# Cumulative County Map (2014-2021)
 
-  for ( i in 1:length( dir() ) ) {
-    
-    start.time <- Sys.time()
-    
-    ct.in <- readRDS( dir()[i] )
-    
-    ct.leaf <- counties( cb = T) %>%
-      left_join(., 
-                data.frame( ct.in ) %>% select( fips.ct, n, dens ) 
-                , by = c( "GEOID" = "fips.ct" ) ) %>% # join Tigris county map to county data
-      
-      mutate( dens = round( dens, digits = 2 ), # round density metric to keep tidy on Leaflet popup
-              popup = paste(sep = "<br/>",      # create popup script for Leaflet map
-                            paste0("<b>",NAMELSAD,", ", STUSPS, "</b>"),
-                            paste0( "<i># New Nonprofits<i>: ", n ),
-                            paste0( "<i>Density New Nonprofits<i>: ", dens, " nonprofits / 1,000 inhabitants" ) ) )
-    
-    
-  
-    setwd( "../Leaflet-Shapefiles/Leaflet-By-Year" ) # save directory
-    
-    saveRDS( ct.leaf, paste0( "USA-Counties-Leaflet-", c(2014:2021)[i], ".rds" ) )
-    
-    setwd("../../By-Year") # back up to yearly data storage directory
-    
-    end.time <- Sys.time()
-    
-    print( end.time - start.time)
-    print( paste0( "Iteration ", i, "/", length( dir() ), " complete" ) ) 
-  }
-# --------------------------------------------------------------------------------------------------------
+ct.leaf <- st_as_sf( st_drop_geometry( cnties )%>%
+  left_join(., counties( cb = T ) , c( "fips.ct" = "GEOID" ) ) %>%
+  mutate( dens = round( dens, digits = 2 ) ) %>%  # round density metric to keep tidy on Leaflet popup
+group_by( year ) %>%                              # group by year to create year-specific variables that will be used for the popups
+  mutate( popup = paste(sep = "<br/>",            # create popup script for Leaflet map
+                        paste0("<b>",NAMELSAD,", ", STUSPS, " (", year ,")</b>"),
+                        paste0( "<i># New Nonprofits<i>: ", n ),
+                        paste0( "<i>Density New Nonprofits<i>: ", dens, " nonprofits / 1,000 inhabitants" ) ) )%>%
+  ungroup() )
+
+
+ 
+ # overwrite USA-Counties dataset/shapefile
+ # dir.create( "Leaflet-Shapefiles" )
+
+setwd( "Leaflet-Shapefiles" )
+saveRDS( ct.leaf, "USA-Counties-Leaflet.rds" )
+ # --------------------------------------------------------------------------------------------------------
  
  
  

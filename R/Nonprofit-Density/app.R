@@ -18,60 +18,25 @@ source('/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial 
 # Import counties landing page map
 main <- "/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/"
 
-setwd( paste0( main, "np-density-dashboard/Data-Rodeo" ) )
+setwd( paste0( main, "np-density-dashboard/Data-Rodeo/Dashboard-County-Data/" ) )
 
-## Cumulative county data
-cnties <- readRDS( "Dashboard-County-Data/USA-Counties.rds" )
-
-## Yearly County Data/shapefile
-setwd("Dashboard-County-Data/By-Year")
-
-## Read-in yearly data/shapefiles for county chloropleths
-for (i in 1:length( dir( ) ) ) {
-  
-  ct.yr <- paste0( 'cnties.', 2014:2021 )
-  
-  assign( ct.yr[ i ], readRDS( dir()[i] ) )
-  
-  
-}
-
-## Leaflet county data/shapefile
-setwd( paste0( main,"np-density-dashboard/Data-Rodeo/Dashboard-County-Data/Leaflet-Shapefiles" ) )
-
-cnty.leaf <- readRDS( "USA-Counties-Leaflet.rds" )
-
-## Read-in yearly data for county Leaflets
-setwd( "Leaflet-By-Year" )
-
-for (i in 1:length( dir( ) ) ) {
-  
-  ct.yr.lf <- paste0( 'cnty.leaf.', 2014:2021 )
-  
-  assign( ct.yr.lf[ i ], readRDS( dir()[i] ) )
-  
-  
-}
+##  County Standard Projection Shapefile
+cnties <- readRDS( "USA-Counties.rds" )
 
 
+## Leaflet County data/shapefile
 
-## Read in cumulative county Dorling Cartogram data/shapefile
+setwd( "Leaflet-Shapefiles" ) 
 
-setwd( paste0( main, "np-density-dashboard/Data-Rodeo" ) )
+cnties.leaf <- readRDS( "USA-Counties-Leaflet.rds" )
 
-cnties.dorling <- readRDS( "Dashboard-County-Data/Dorling-Shapefiles/USA-Counties-Dorling.rds" )
 
-## Read-in yearly data for county Leaflets
-setwd( "Dashboard-County-Data/Dorling-Shapefiles/Dorling-By-Year" )
+## Dorling Cartogram Data/Shapefile
 
-for (i in 1:length( dir( ) ) ) {
-  
-  ct.yr.d <- paste0( 'cnties.dorling.', 2014:2021 )
-  
-  assign( ct.yr.d[ i ], readRDS( dir()[i] ) )
-  
-  
-}
+setwd( "../Dorling-Shapefiles/" ) 
+
+cnties.dorling <- readRDS( "USA-Counties-Dorling.rds" )
+
 
 
 ### Plotting Functions ###
@@ -105,11 +70,11 @@ lp.plot.chloro <- function( df, input ){
 
 lp.plot.leaf <- function( df ){
   
-  leaflet(df) %>% 
+  leaflet( df ) %>% 
     addTiles() %>%
-    addPolygons(color = "#444444", weight = 1, smoothFactor = 0.5,
-                opacity = 1.0, fillOpacity = 0.5, popup = ~as.character(popup) ) %>%
-    setView(-98.35, 39.50, zoom = 3.499)
+    addPolygons( color = "#444444", weight = 1, smoothFactor = 0.5,
+                opacity = 1.0, fillOpacity = 0.5, popup = ~as.character( popup ) ) %>%
+    setView( -98.35, 39.50, zoom = 3.499 )
   
 }
 
@@ -121,8 +86,8 @@ lp.plot.hist <- function( df, input ) {
     geom_histogram( color="darkblue", fill="lightblue", bins = 40 ) +
     theme_minimal()+
     ylab( "Frequency") +
-    xlab( "# New Nonprofits per County")+
-    ggtitle( "Distribution of County Nonprofits")+
+    xlab( "NPO Density ( # New NPOs / 1,000 county residents )")+
+    ggtitle( "Distribution of County Nonprofit (NPO) Density")+
     theme( text = element_text( family = "Avenir") )
   
 }
@@ -155,7 +120,7 @@ ui <- bootstrapPage(
                                              height="45%", width="90%", align="center" ) ) ),
                               
                               pickerInput( "yr_select", "Year:",   
-                                           choices = c("Cumulative: 2014-2021", "2014", "2015", "2016", "2017", "2018", 
+                                           choices = c("Cumulative: 2014-2021" = "cum", "2014", "2015", "2016", "2017", "2018", 
                                                        "2019", "2020", "2021" ), 
                                            selected = c("Cumulative: 2014-2021" ),
                                            multiple = FALSE),
@@ -165,8 +130,8 @@ ui <- bootstrapPage(
                                                "Dorling Cartogram" = "dorling") ) ,
                               
                               pickerInput( "metric", "Metric: ",   
-                                           choices = c("dens.cum" ), 
-                                           selected = c("dens.cum" ),
+                                           choices = c( "Density" = "dens" ), 
+                                           selected = c("Density" ),
                                            multiple = FALSE) ),
                             
                             mainPanel( plotOutput( "ptype" , width = "90%", height = 400),
@@ -184,9 +149,15 @@ ui <- bootstrapPage(
                           sidebarLayout(
                             sidebarPanel(
                               span( div( img(src="output-onlineimagetools(2).png",
-                                             height="45%", width="90%", align="center" ) ) ) ),
+                                             height="45%", width="90%", align="center" ) ) ) ,
                             
-                            mainPanel( leafletOutput( "lp.3" ) )
+                            pickerInput( "yr_select", "Year:",   
+                                         choices = c("Cumulative: 2014-2021" = "cum", "2014", "2015", "2016", "2017", "2018", 
+                                                     "2019", "2020", "2021" ), 
+                                         selected = c("Cumulative: 2014-2021" ),
+                                         multiple = FALSE) ),
+                            
+                            mainPanel( leafletOutput( "lp.l.1" ) )
                             
                           )
                       )
@@ -200,121 +171,22 @@ ui <- bootstrapPage(
 # SERVER
 server <- function( input, output ) { 
   
-  
-  
-  year.reactive.df.chloro <- reactive(
+
+  # data filtering reactive (by year)
+  data_reactive <- reactive(
     {
-      if(input$yr_select=="Cumulative: 2014-2021") {
-        cnties
-      }
-      else if(input$yr_select=="2014") {
-        cnties.2014
-      }
-      else if(input$yr_select=="2015") {
-        cnties.2015
-      }
-      else if(input$yr_select=="2016") {
-        cnties.2016
-      }
-      else  if(input$yr_select=="2017") {
-        cnties.2017
-      }
-      else   if(input$yr_select=="2018") {
-        cnties.2018
-      }
-      else   if(input$yr_select=="2019") {
-        cnties.2019
-      }
-      else    if(input$yr_select=="2020") {
-        cnties.2020
-      }
-      else  if(input$yr_select=="2021") {
-        cnties.2021
-      }
-    }
     
+      if (input$ptype=="dorling") {
+      filter( cnties.dorling, year ==  input$yr_select )
+        
+      }
+      else if (input$ptype=="chloro") {
+        filter( cnties, year == input$yr_select )
+        
+      }
+}
   )
   
-  year.reactive.df.dorling <- reactive(
-    {
-      if(input$yr_select=="Cumulative: 2014-2021") {
-        cnties.dorling
-      }
-      else if(input$yr_select=="2014") {
-        cnties.dorling.2014
-      }
-      else if(input$yr_select=="2015") {
-        cnties.dorling.2015
-      }
-      else if(input$yr_select=="2016") {
-        cnties.dorling.2016
-      }
-      else  if(input$yr_select=="2017") {
-        cnties.dorling.2017
-      }
-      else   if(input$yr_select=="2018") {
-        cnties.dorling.2018
-      }
-      else   if(input$yr_select=="2019") {
-        cnties.dorling.2019
-      }
-      else    if(input$yr_select=="2020") {
-        cnties.dorling.2020
-      }
-      else  if(input$yr_select=="2021") {
-        cnties.dorling.2021
-      }
-    }
-  )
-  
-  year.reactive.df.leaflet <- reactive(
-    {
-      if(input$yr_select=="Cumulative: 2014-2021") {
-        cnty.leaf
-      }
-      else if(input$yr_select=="2014") {
-        cnty.leaf.2014
-      }
-      else if(input$yr_select=="2015") {
-        cnty.leaf.2015
-      }
-      else if(input$yr_select=="2016") {
-        cnty.leaf.2016
-      }
-      else  if(input$yr_select=="2017") {
-        cnty.leaf.2017
-      }
-      else   if(input$yr_select=="2018") {
-        cnty.leaf.2018
-      }
-      else   if(input$yr_select=="2019") {
-        cnty.leaf.2019
-      }
-      else    if(input$yr_select=="2020") {
-        cnty.leaf.2020
-      }
-      else  if(input$yr_select=="2021") {
-        cnty.leaf.2021
-      }
-    }
-  )
-  
-  
-  
-  # reactive for summary statistics variable selector
-  metric.reactive <- reactive({
-    if (input$metric =='dens.cum'){
-      "n.cum"
-    }
-  })
-  
-  # reactive for chloropleth variable selector
-  
-  metric.reactive.b <- reactive({
-    if (input$metric =='Density'){
-      "dens.cum"
-    }
-  })
   
   
   ### Rendering ###
@@ -323,17 +195,22 @@ server <- function( input, output ) {
   # Radio button for plot type
   output$ptype <- renderPlot( {
     switch(input$ptype,
-           "chloro" = lp.plot.chloro( df = year.reactive.df.chloro(), input = input$metric ),
-           "dorling" = lp.plot.dorling( df = year.reactive.df.dorling(), input = input$metric ) )
+           "chloro" = lp.plot.chloro( df = cnties %>% filter( year == input$yr_select), input = input$metric ),
+           "dorling" = lp.plot.chloro( df = cnties.dorling %>% filter( year == input$yr_select), input = input$metric ) )
   }
   
   )
   
   # histograms
-  output$lp.h.1 <- renderPlot( lp.plot.hist( df = year.reactive.df.chloro(), input = metric.reactive() ) )
+  output$lp.h.1 <- renderPlot( lp.plot.hist( df = data_reactive()  , input = input$metric ) )
   
   # tables
-  output$lp.t.1 <- renderTable( lp.tbl( df= year.reactive.df.chloro(), input = metric.reactive() ) )
+  output$lp.t.1 <- renderTable( lp.tbl( data_reactive(), input = input$metric ) )
+  
+  # leaflet
+  
+  output$lp.l.1 <- renderLeaflet( lp.plot.leaf( cnties.leaf %>% filter( year == input$yr_select ) ) )
+  
 }
 
 shinyApp( ui, server )
