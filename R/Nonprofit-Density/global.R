@@ -27,46 +27,16 @@ main <- "/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial
 p <- paste0( "USA-Counties" )
 ct <- paste0( main, "np-density-dashboard/Data-Rodeo/Dashboard-County-Data" )
 setwd( ct )
-assign( "cnties.", readRDS( paste0( p, ".rds") ) )
+assign( "cnties", readRDS( paste0( p, ".rds") ) )
 
-# yearly std projection files
-setwd( "By-Year")
-
-yrs <- c(2014:2021)
-
-for ( i in 1:length( yrs ) ){
-  
-  assign( paste0( "cnties.", yrs[i] ), readRDS( paste0( p,"-", yrs[i], ".rds") ) )
-  
-}
 
 # main Dorling Cartogram file
-setwd( "../Dorling-Shapefiles" )
-assign( "cnties.dorling.", readRDS( paste0( p,"-Dorling", ".rds") ) )
-
-# yearly Dorling Cartogram files
-setwd( "Dorling-By-Year")
-
-yrs <- c(2014:2021)
-
-for ( i in 1:length( yrs ) ){
-  
-  assign( paste0( "cnties.dorling.", yrs[i] ), readRDS( paste0( p,"-Dorling", "-", yrs[i], ".rds") ) )
-  
-}
+setwd( "Dorling-Shapefiles" )
+assign( "cnties.dorling", readRDS( paste0( p,"-Dorling", ".rds") ) )
 
 # Leaflet file
 setwd( paste0( ct, "/Leaflet-Shapefiles") )
 assign( "cnties.leaf", readRDS( paste0( p,"-Leaflet", ".rds") ) )
-
-# yearly leaflet files
-setwd( "Leaflet-By-Year")
-
-for ( i in 1:length( yrs ) ){
-  
-  assign( paste0( "cnties.leaf.", yrs[i] ), readRDS( paste0( p,"-Leaflet", "-", yrs[i], ".rds") ) )
-  
-}
 
 
 ### Plotting Functions ###

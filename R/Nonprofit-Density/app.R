@@ -1,6 +1,3 @@
-###---------------------------------------------------
-###   SHINY APP--NONPROFIT DENSITY
-###---------------------------------------------------
 
 library( shiny )
 library( tidyverse )
@@ -85,48 +82,23 @@ lp.plot.chloro <- function( df, input ){
   # there are issues binning variables with high quantitites of zero values. Thus,
   # we will separate the zero and non-zero values of the metrics into separate datasets, bin them separately
   # and then row bind them back together for the final plot:
-  df.zeros <- df[df$dens == 0, ] # metric = 0
-  df.zeros$dens.q <- 0           # assign value of zero for the ordinal variable
+  df.zeros <- df[df[[ input ]] == 0, ] # metric = 0
+  df.zeros[[ paste0( input ) ]] <- 0           # assign value of zero for the ordinal variable
   
-  df.nonzeros <- df[df$dens != 0,] # metric != 0
-  df.nonzeros$dens.q <- factor( quant.cut( var = 'dens', x = 6 , df = df.nonzeros ) ) # bin into 6 
+  df.nonzeros <- df[df[[ input ]] != 0,] # metric != 0
+  df.nonzeros[[ paste0( input  ) ]] <- factor( quant.cut( var = input, x = 6 , df = df.nonzeros ) ) # bin into 6 
   # ordinal categories
   
   df.out <- rbind( df.zeros, df.nonzeros)  # bind
-  df.out$dens.q <- factor( df.out$dens.q ) # set to factor
+  df.out[[ paste0( input  ) ]] <- factor( df.out[[ paste0( input  ) ]] ) # set to factor
   
   ggplot( ) + geom_sf( df.out,             # plot
-                       mapping = aes_string( fill = input ),
+                       mapping = aes_string( fill = paste0( input ) ),
                        color = NA, size = 0.5 ) +
     scale_fill_brewer( "Density Scale", palette = 1 ) +
     theme_minimal( ) +
     theme( text = element_text( family = "Avenir" ) )
   
-}
-
-# landing page Dorling Cartograms
-lp.plot.dorling <- function( df, input ){
-  
-  # there are issues binning variables with high quantitites of zero values. Thus,
-  # we will separate the zero and non-zero values of the metrics into separate datasets, bin them separately
-  # and then row bind them back together for the final plot:
-  df.zeros <- df[df$dens == 0, ] # metric = 0
-  df.zeros$dens.q <- 0           # assign value of zero for the ordinal variable
-  
-  df.nonzeros <- df[df$dens != 0,] # metric != 0
-  df.nonzeros$dens.q <- factor( quant.cut( var = 'dens', x = 6 , df = df.nonzeros ) ) # bin into 6 
-  # ordinal categories
-  
-  df.out <- rbind( df.zeros, df.nonzeros)  # bind
-  df.out$dens.q <- factor( df.out$dens.q ) # set to factor
-  
-  df$dens.q <- factor( quant.cut( var = 'dens', x = 7 ,df = df ) )
-  
-  ggplot(  )  +
-    geom_sf( df, mapping = aes_string( fill = input ),  color = NA ) +
-    scale_fill_brewer( "Density Scale", palette = 1 ) +
-    theme_minimal( ) +
-    theme( text = element_text( family = "Avenir" ) )
 }
 
 # landing page interactive Leaflet
@@ -193,8 +165,8 @@ ui <- bootstrapPage(
                                                "Dorling Cartogram" = "dorling") ) ,
                               
                               pickerInput( "metric", "Metric: ",   
-                                           choices = c("Density" ), 
-                                           selected = c("Density" ),
+                                           choices = c("dens.cum" ), 
+                                           selected = c("dens.cum" ),
                                            multiple = FALSE) ),
                             
                             mainPanel( plotOutput( "ptype" , width = "90%", height = 400),
@@ -331,8 +303,8 @@ server <- function( input, output ) {
   
   # reactive for summary statistics variable selector
   metric.reactive <- reactive({
-    if (input$metric =='Density'){
-      "n"
+    if (input$metric =='dens.cum'){
+      "n.cum"
     }
   })
   
@@ -340,7 +312,7 @@ server <- function( input, output ) {
   
   metric.reactive.b <- reactive({
     if (input$metric =='Density'){
-      "dens.q"
+      "dens.cum"
     }
   })
   
@@ -351,8 +323,8 @@ server <- function( input, output ) {
   # Radio button for plot type
   output$ptype <- renderPlot( {
     switch(input$ptype,
-           "chloro" = lp.plot.chloro( df = year.reactive.df.chloro(), input = metric.reactive.b() ),
-           "dorling" = lp.plot.dorling( df = year.reactive.df.dorling(), input = metric.reactive.b() ) )
+           "chloro" = lp.plot.chloro( df = year.reactive.df.chloro(), input = input$metric ),
+           "dorling" = lp.plot.dorling( df = year.reactive.df.dorling(), input = input$metric ) )
   }
   
   )
