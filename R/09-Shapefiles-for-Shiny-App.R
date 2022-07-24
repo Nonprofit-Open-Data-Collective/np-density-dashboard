@@ -71,21 +71,30 @@ state.codes <- unique( str_sub( t$GEOID, -11, -10 ) )
 state.codes <- state.codes[ !state.codes %in% c( "69", "60", "66", "78" ) ]
 
 # loop through state FIPS codes
-l <- list( )
-for ( i in 1:length( state.codes ) ) {
+l <- list( )                      # initialize null list to store state results
+ys <- c( 2014:2020, 2020 )        # years to store data from 2014-2020 (2021 will have to use 2020 data since 2021 data is not available)
+
+for ( i in 1:length( state.codes ) ) {   # index on state FIPS code
   
   start.time <- Sys.time()
   
-l[[i]] <- get_acs( geography = "tract", 
+  
+  k <- list() # initialize null list to store yearly results
+  for ( j in 1: length( c( ys ) ) ){
+k[[j]] <- get_acs( geography = "tract", year = ys[j],
                 variables = c( pop = "B01003_001", pov = "B17001_002", med.income = "B19013_001",
                                female = "B01001_026", male = "B01001_002" ),    
                 state = state.codes[i]  ) %>%   # This includes all states that we specify in the loop
   pivot_wider( id_cols = GEOID, names_from = variable, values_from = estimate ) %>%   # Pivot data since tidycensus returns data table as a long data frame
   mutate( poverty.rate = ( pov / pop )*100,
           perc.female = ( female / pop )*100,
-          perc.male = ( male / pop )*100 ) %>%
-  select( GEOID, pop, poverty.rate, med.income, perc.female, perc.male ) 
-
+          perc.male = ( male / pop )*100 ,
+          year = ys[j] ) %>%
+  select( GEOID, pop, poverty.rate, med.income, perc.female, perc.male, year ) 
+  }
+  
+l[[i]] <- do.call( "rbind", k )
+  
 end.time <- Sys.time()
 
 print( end.time - start.time)
@@ -93,22 +102,62 @@ print( paste0( "Iteration ", i, "/", length( state.codes ), " complete" ) )
 
 }
 
-d.1 <- do.call( "rbind", l ) # dataframe containing a column for tract GEOID and a column for its total population
-# this dataset should contain some ~85,000 observations as it contains all census tracts in the US
+setwd( lf )
+setwd( "../np-density-dashboard/Data-Wrangled")
+# dir.create( "01-Temp" )
 
-d.2 <- npo.sf %>%
-  group_by( GEOID ) %>%         # group by tract FIPS for subsequent computation
-  mutate( n = ifelse( is.na( n() ) ==T, 0, n( ) ) ) %>%         # count number of rows per tract FIPS since rows are the nonprofits
+d.1 <- do.call( "rbind", l ) %>% mutate( year = as.character( year ) ) # dataframe containing a column for tract GEOID and columns for its yearly census data
+# there are ~614796 rows in this dataset
+
+# saveRDS( d.1, "01-MSA-Census.rds" )
+
+setwd( "01-Temp" )
+d.1 <- readRDS( "01-MSA-Census.rds" )
+
+
+# save it for later access without rereunning code:
+
+
+ys.np <- list( 2014, 2015, 2016, 2017, 2018, 2019, 2020, c( 2014:2021) )       # we will index on the years we will subset
+ys.np.nm <- c( "2014", "2015", "2016", "2017", "2018", "2019", "2020", "cum" )
+b <- list()
+for ( i in 1: length( ys.np ) ){
+  
+  start.time <- Sys.time()
+  
+  dat.yr <- filter( d.1, year == ys.np.nm[i] )   # subset data by year
+  
+b[[i]] <- npo.sf %>%
+  filter( YR %in% ys.np[[i]] ) %>%                # group by tract FIPS for subsequent computation
+  left_join( dat.yr, .) %>%                       # join with Census population data 
+  group_by( GEOID ) %>%
+  mutate( n = ifelse( is.na( n() ) ==T, 0, n( ) ) ) %>%          # count number of rows per tract FIPS since rows are the nonprofits
   ungroup() %>%
-  distinct( GEOID, n ) %>%      # retain only a dataframe of tract FIPS and the no. of nonprofits in them
-  left_join( d.1, .) %>%        # join with Census population data
   mutate( n = ifelse( is.na( n ), 0, n ),                # tracts that have an NA (i.e., tracts not represented in the NCCS data) get allocated 0 new NPOs 
           dens = ( n / pop ) * 1000 ,                    # create NPO density metric (NPOs per 1k in the population)
-          dens = ifelse( is.na( dens ), 0, dens ) ) %>%  # those still having a "NA" for the density metric are tracts that have 0 population and 0 number of nonprofits (n = 763 instances of 0/0)       
+          dens = ifelse( is.na( dens ), 0, dens ),
+          year = ys.np.nm[i] ) %>%  # those still having a "NA" for the density metric are tracts that have 0 population and 0 number of nonprofits (n = 763 instances of 0/0)       
   distinct( GEOID, pop, poverty.rate, med.income, 
-            perc.female, perc.male, n, dens )                # keep unique rows (i.e., 1 for each tract)
+            perc.female, perc.male, n, year, dens )                # keep unique rows (i.e., 1 for each tract)
 # this dataset should have same number of rows as d.1 (all census tracts) and no missings
 # in any of the columns
+
+end.time <- Sys.time()
+
+print( end.time - start.time)
+print( paste0( "Iteration ", i, "/", length( ys.np ), " complete" ) ) 
+
+}
+
+# bind into single dataset and merge yearly NPO data to yearly census data 
+d.2 <- do.call( "rbind", b )
+
+# save for later use 
+setwd( lf )
+setwd( "../np-density-dashboard/Data-Wrangled/01-Temp")
+# saveRDS( d.2, "02-MSA-NPO.rds" )
+
+d.2 <- readRDS( "02-MSA-NPO.rds" )
 
 
 # obtain MSA cartographic boundary shapefiles
@@ -120,21 +169,22 @@ sj <- m %>%
   rename (MSA = NAME ) %>%
   select( MSA, geometry ) %>%
   st_join( t, ., left = T ) %>%          # spatial left join
-  left_join( ., d.2) %>%                 # append Census data
   distinct( )
 
 length( unique( sj$GEOID ) ) # we have some duplicated rows
 
 sj.dup <- sj[ which( duplicated( sj$GEOID ) ), ]
-# View( sj.dup )
 
 #### After diagnosing, it appears that some Census tracts are counted in more than 1 MSA. Thus, 
 #### No need for any changes since we will be looking and subsetting based on MSA, not tract
 
 
-## number of MSA's with > 500k population
+### Select MSAs to Include in Map ###
+
+## number of MSA's with > 500k population in 2020
 
 keep.msa.500k <- sj %>%
+  left_join( ., d.2 %>% filter( year == "2020") %>% select( GEOID, pop ) %>% distinct( GEOID, pop ) ) %>%
   group_by( MSA ) %>%
   mutate( sum.pop = sum( pop )) %>%
   ungroup() %>%
@@ -143,9 +193,10 @@ keep.msa.500k <- sj %>%
 
 # results in 130 MSAs
 
-## number of MSAs with > 1.5m population
+## number of MSAs with > 1.5m population in 2020
 
 keep.msa.1.5m <- sj %>%
+  left_join( ., d.2 %>% filter( year == "2020") %>% select( GEOID, pop ) %>% distinct( GEOID, pop ) ) %>%
   group_by( MSA ) %>%
   mutate( sum.pop = sum( pop )) %>%
   ungroup() %>%
@@ -158,26 +209,26 @@ keep.msa.1.5m <- sj %>%
 ## Decision: for now, we will move forward with keeping only the Census tracts in those MSAs with > 1.5 m 
 # in the population--this will keep the load times moving quickly in the dashboard
 
-## subset tract population and accompanying data in those 43 MSAs
-# obtain additional tract-level Census data that will be useful for plotting different metrics
+## subset tract population and accompanying shapefile in those 43 MSAs
+
 
 d.3 <- sj %>%
   filter( MSA %in% keep.msa.1.5m$MSA ) 
 
 
-## Save separate datasets according to MSA to later load into the dashboard app:
+# merge with tract-level data 
 
-msas <- unique( d.3$MSA ) # dataset names will be according to MSA names
+d.4 <- left_join(d.2, d.3, by = "GEOID") %>%      # merge shapefile with tract data
+  filter( MSA %in% d.3$MSA )                      # keep only tracts in the 43 selected MSAs
 
-# text process them a bit to make them easier to store
-msa.file <- msas %>%
+# text process them a bit to make them easier to store and for showing on the Shiny App
+d.4$MSA <- d.4$MSA %>%
   str_extract( ., "^.*(?=(\\,))" ) %>%   # first, extract everything before the comma (subsequently leading to the state)
   str_replace( ., "\\s", "-" )%>%        # replace white space with a "-"
   str_remove( ., "\\." ) %>%             # remove any "." from the strings
   str_replace( ., "\\s", "-" )           # run again because we still have some white spaces that have not been replaced
 
-# now loop and make store shapefiles as .rds in "/Data-Rodeo"
-
+setwd( lf )
 setwd("../np-density-dashboard/Data-Rodeo")
 # dir.create( "Dashboard-MSA-Data" )
 # dir()
@@ -185,13 +236,17 @@ setwd("Dashboard-MSA-Data")
 # dir.create( "Dorling-Shapefiles" ) # create subfolder to store Dorling Cartogram sf objects
 # dir()
 
-
+saveRDS( d.4, "USA-MSAs.rds" )
 # create LOG file/metadata
 log.head <- c( "Iteration", "MSA", "No.Tracts", "Pop", "No.NPO"," Save.Time" )
 
 write( log.head, file = "MSA-Data-Log.txt", append = F, sep = "\t" )
 
 d.3 <- st_transform( d.3, crs = 3395 ) # ensure data are in compatible projection before using cartogram fct
+
+
+
+
 
 
 ### NOTE: The following loop may take quite a while to run depending on your machine's specifications ###
@@ -544,49 +599,6 @@ for ( i in 1:length( yr.levels ) ) {
  
  ### NOTE: The following loop may take quite a while to run depending on your machine's specifications ###
  
- # inner loop (indexed on each of the 43 MSAs)
- for ( j in 1:length( msa.file ) ) {
-   
-   start.time.nested <- Sys.time()
-   
-   # subset by MSA
-   dat <- d.3[ which( d.3$MSA == msas[j] ), ]
-   
-   # do a spatial intersection to ensure Census tracts touching but outside the boundaries are excluded
-   sub.area <- filter( m, grepl( msas[j], NAME ) ) # obtain cartographic boundary geometries
-   
-   s <- st_within( dat, sub.area ) # spatial overlay
-   
-   these <- map_lgl( s, function( x ) {        # logical for rows to keep
-     if ( length( x ) == 1 ) {
-       return( TRUE )
-     } else {
-       return( FALSE )
-     }
-   } )
-   
-   # final subset to remove boundary Census tracts outside MSA
-   dat <- dat[ these, ]
-   
-   # save in parent dir
-   setwd( lf )
-   setwd( paste0( "../np-density-dashboard/Data-Rodeo/Dashboard-MSA-Data/By-Year-MSA/", c(2014:2021)[i] )  )
-   saveRDS( dat , paste0( msa.file[j], "-MSA-", c(2014:2021)[i], ".rds" ))
-   
-   ## Dorling Cartogram transformation and save in subfolder
-   
-   setwd( paste0( "../../Dorling-Shapefiles/By-Year-MSA-Dorling/", c(2014:2021)[i] ) ) # save sf projection for Dorling Cartogram in a subfolder
-   dat$pop.w <- dat$pop /  max( dat$pop, na.rm = T )   # standardizes it by max weight
-   d.dorling <- cartogram_dorling( x = dat, weight = "pop.w" , k = 0.05 ) # projects to Dorling Cartogram
-   
-   saveRDS( d.dorling , paste0( msa.file[j], "-Dorling-", c(2014:2021)[i], ".rds" ))
-   
-   
-   end.time.nested <- Sys.time()
-   print( end.time.nested - start.time.nested )
-   print( paste0( "Nested iteration ", paste0( i,": ",j ), "/", length( msa.file ), " complete" ) ) 
-   
- }
  
  end.time <- Sys.time()
  print( end.time - start.time)

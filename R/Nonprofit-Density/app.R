@@ -176,15 +176,11 @@ server <- function( input, output ) {
   data_reactive <- reactive(
     {
     
-      if (input$ptype=="dorling") {
-      filter( cnties.dorling, year ==  input$yr_select )
-        
+      if (input$ptype=="dorling") 
+        { filter( cnties.dorling, year ==  input$yr_select ) }
+      else if (input$ptype=="chloro") 
+      { filter( cnties, year == input$yr_select ) }
       }
-      else if (input$ptype=="chloro") {
-        filter( cnties, year == input$yr_select )
-        
-      }
-}
   )
   
   
