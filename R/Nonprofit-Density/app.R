@@ -38,6 +38,18 @@ setwd( "../Dorling-Shapefiles/" )
 cnties.dorling <- readRDS( "USA-Counties-Dorling.rds" )
 
 
+## MSA Standard Projection Shapefile
+
+setwd( paste0( main, "np-density-dashboard/Data-Rodeo/Dashboard-MSA-Data/" ) )
+
+msas <- readRDS( "USA-MSAs.rds" )
+
+## MSA Dorling Shapefile
+
+setwd( paste0( main, "np-density-dashboard/Data-Rodeo/Dashboard-MSA-Data/Dorling-Shapefiles" ) )
+
+msas <- readRDS( "USA-MSAs-Dorling.rds" )
+
 
 ### Plotting Functions ###
 
@@ -110,6 +122,8 @@ ui <- bootstrapPage(
              
              HTML('<a style="text-decoration:none;cursor:default;color:#FFFFFF;" class="active" href="#">U.S. Nonprofit Density</a>'), 
              id="nav",
+             
+             ## Counties Tab
              tabPanel("New Nonprofit Density, 2014-2021: U.S. Counties",
                       div(class="outer",
                           tags$head(includeCSS("/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/np-density-dashboard/R/Nonprofit-Density/styles.css")),
@@ -142,6 +156,40 @@ ui <- bootstrapPage(
                       )
              ),
              
+             ## MSAs Tab
+             tabPanel("Metropolitan Statistical Areas",
+                      div(class="outer",
+                          tags$head(includeCSS("/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/np-density-dashboard/R/Nonprofit-Density/styles.css")),
+                          
+                          sidebarLayout(
+                            sidebarPanel(
+                              span( div( img(src="output-onlineimagetools(2).png",
+                                             height="45%", width="90%", align="center" ) ) ),
+                              
+                              pickerInput( "yr_select_msa", "Year:",   
+                                           choices = c("Cumulative: 2014-2021" = "cum", "2014", "2015", "2016", "2017", "2018", 
+                                                       "2019", "2020", "2021" ), 
+                                           selected = c("Cumulative: 2014-2021" ),
+                                           multiple = FALSE),
+                              
+                              radioButtons( "ptype_msa", "Plot Type:",
+                                            c( "Chloropleth" = "chloro",
+                                               "Dorling Cartogram" = "dorling") ) ,
+                              
+                              pickerInput( "metric_msa", "Metric: ",   
+                                           choices = c( "Density" = "dens" ), 
+                                           selected = c("Density" ),
+                                           multiple = FALSE) ),
+                            
+                            mainPanel( plotOutput( "ptype" , width = "90%", height = 400),
+                                       plotOutput( "lp.h.1" ,width = "90%", height = 200),
+                                       tableOutput( "lp.t.1" ) )
+                            
+                          )
+                      )
+             ),
+             
+             ## Leaflet Tab
              tabPanel("Interactive Leaflet Map",
                       div(class="outer",
                           tags$head(includeCSS("/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/np-density-dashboard/R/Nonprofit-Density/styles.css")),
@@ -172,21 +220,34 @@ ui <- bootstrapPage(
 server <- function( input, output ) { 
   
 
-  # data filtering reactive (by year)
+  ## data filtering reactive (by year)
+  
+  # counties dataset
   data_reactive <- reactive(
     {
     
-      if (input$ptype=="dorling") 
+      if ( input$ptype=="dorling" ) 
         { filter( cnties.dorling, year ==  input$yr_select ) }
-      else if (input$ptype=="chloro") 
+      else if ( input$ptype=="chloro" ) 
       { filter( cnties, year == input$yr_select ) }
       }
   )
   
+  # MSAs dataset
+  data_reactive_msas <- reactive(
+    {
+      
+      if (input$ptype_msa=="dorling") 
+      { filter( msas.dorling, year ==  input$yr_select_msa ) }
+      else if (input$ptype_msa=="chloro") 
+      { filter( msas, year == input$yr_select_msa ) }
+    }
+  )
   
   
   ### Rendering ###
   
+ ## County Maps
   
   # Radio button for plot type
   output$ptype <- renderPlot( {
@@ -207,6 +268,24 @@ server <- function( input, output ) {
   
   output$lp.l.1 <- renderLeaflet( lp.plot.leaf( cnties.leaf %>% filter( year == input$yr_select ) ) )
   
+  
+  ## MSA Maps
+  
+  # Radio button for plot type
+  output$ptype <- renderPlot( {
+    switch(input$ptype,
+           "chloro" = lp.plot.chloro( df = msas %>% filter( year == input$yr_select_msa, input = input$metric_msa ),
+           "dorling" = lp.plot.chloro( df = msas.dorling %>% filter( year == input$yr_select_msa ), input = input$metric_msa ) )
+  }
+  
+  )
+  
+  # histograms
+  output$lp.h.1 <- renderPlot( lp.plot.hist( df = data_reactive_msa()  , input = input$metric_msa ) )
+  
+  # tables
+  output$lp.t.1 <- renderTable( lp.tbl( data_reactive_msa(), input = input$metric_msa ) )
+ 
 }
 
 shinyApp( ui, server )
