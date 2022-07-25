@@ -48,7 +48,7 @@ msas <- readRDS( "USA-MSAs.rds" )
 
 setwd( paste0( main, "np-density-dashboard/Data-Rodeo/Dashboard-MSA-Data/Dorling-Shapefiles" ) )
 
-msas <- readRDS( "USA-MSAs-Dorling.rds" )
+# msas.dorling <- readRDS( "USA-MSAs-Dorling.rds" )
 
 
 ### Plotting Functions ###
@@ -179,15 +179,38 @@ ui <- bootstrapPage(
                               pickerInput( "metric_msa", "Metric: ",   
                                            choices = c( "Density" = "dens" ), 
                                            selected = c("Density" ),
-                                           multiple = FALSE) ),
+                                           multiple = FALSE),
                             
-                            mainPanel( plotOutput( "ptype" , width = "90%", height = 400),
-                                       plotOutput( "lp.h.1" ,width = "90%", height = 200),
-                                       tableOutput( "lp.t.1" ) )
+                            pickerInput( "msa", "MSA: ",   
+                                         choices = c( "Atlanta-Sandy-Springs-Alpharetta", "Austin-Round-Rock-Georgetown", 
+                                                      "Baltimore-Columbia-Towson", "Boston-Cambridge-Newton", 
+                                                      "Charlotte-Concord-Gastonia", "Chicago-Naperville-Elgin", "Cincinnati", 
+                                                      "Cleveland-Elyria", "Columbus", "Dallas-Fort-Worth-Arlington", "Denver-Aurora-Lakewood", 
+                                                      "Detroit-Warren-Dearborn", "Houston-The-Woodlands-Sugar-Land", 
+                                                      "Indianapolis-Carmel-Anderson", "Jacksonville", "Kansas-City", 
+                                                      "Las-Vegas-Henderson-Paradise", "Los-Angeles-Long-Beach-Anaheim", 
+                                                      "Miami-Fort-Lauderdale-Pompano-Beach", "Milwaukee-Waukesha", 
+                                                      "Minneapolis-St-Paul-Bloomington", "Nashville-Davidson--Murfreesboro--Franklin", 
+                                                      "New-York-Newark-Jersey-City", "Oklahoma-City", "Orlando-Kissimmee-Sanford", 
+                                                      "Philadelphia-Camden-Wilmington", "Phoenix-Mesa-Chandler", "Pittsburgh", 
+                                                      "Portland-Vancouver-Hillsboro", "Providence-Warwick", "Raleigh-Cary", 
+                                                      "Riverside-San-Bernardino-Ontario", "Sacramento-Roseville-Folsom", 
+                                                      "San-Antonio-New-Braunfels", "San-Diego-Chula-Vista-Carlsbad", 
+                                                      "San-Francisco-Oakland-Berkeley", "San-Jose-Sunnyvale-Santa-Clara", 
+                                                      "San-Juan-Bayamón-Caguas", "Seattle-Tacoma-Bellevue", "St-Louis", 
+                                                      "Tampa-St-Petersburg-Clearwater", "Virginia-Beach-Norfolk-Newport-News", 
+                                                      "Washington-Arlington-Alexandria" ), 
+                                         selected = c( "Washington-Arlington-Alexandria" ),
+                                         multiple = FALSE) ),
+                            
+                            mainPanel( plotOutput( "ptype.msa" , width = "90%", height = 400),
+                                       plotOutput( "lp.h.1.msa" ,width = "90%", height = 200),
+                                       tableOutput( "lp.t.1.msa" ) )
                             
                           )
                       )
-             ),
+                      ),
+             
              
              ## Leaflet Tab
              tabPanel("Interactive Leaflet Map",
@@ -234,13 +257,13 @@ server <- function( input, output ) {
   )
   
   # MSAs dataset
-  data_reactive_msas <- reactive(
+  data_reactive_msa <- reactive(
     {
       
       if (input$ptype_msa=="dorling") 
-      { filter( msas.dorling, year ==  input$yr_select_msa ) }
+      { filter( msas, year ==  input$yr_select_msa & MSA == input$msa ) }
       else if (input$ptype_msa=="chloro") 
-      { filter( msas, year == input$yr_select_msa ) }
+      { filter( msas, year == input$yr_select_msa & MSA == input$msa ) }
     }
   )
   
@@ -252,8 +275,8 @@ server <- function( input, output ) {
   # Radio button for plot type
   output$ptype <- renderPlot( {
     switch(input$ptype,
-           "chloro" = lp.plot.chloro( df = cnties %>% filter( year == input$yr_select), input = input$metric ),
-           "dorling" = lp.plot.chloro( df = cnties.dorling %>% filter( year == input$yr_select), input = input$metric ) )
+           "chloro" = lp.plot.chloro( df = cnties %>% filter( year == input$yr_select ), input = input$metric ), 
+           "dorling" = lp.plot.chloro( df = cnties.dorling %>% filter( year == input$yr_select ), input = input$metric ) )
   }
   
   )
@@ -272,19 +295,19 @@ server <- function( input, output ) {
   ## MSA Maps
   
   # Radio button for plot type
-  output$ptype <- renderPlot( {
-    switch(input$ptype,
-           "chloro" = lp.plot.chloro( df = msas %>% filter( year == input$yr_select_msa, input = input$metric_msa ),
-           "dorling" = lp.plot.chloro( df = msas.dorling %>% filter( year == input$yr_select_msa ), input = input$metric_msa ) )
+  output$ptype.msa <- renderPlot( {
+    switch(input$ptype_msa,
+           "chloro" = lp.plot.chloro( df = msas %>% filter( year == input$yr_select_msa & MSA == input$msa ), input = input$metric_msa  ),
+           "dorling" = lp.plot.chloro( df = msas %>% filter( year == input$yr_select_msa  & MSA == input$msa ), input = input$metric_msa ) )
   }
   
   )
   
   # histograms
-  output$lp.h.1 <- renderPlot( lp.plot.hist( df = data_reactive_msa()  , input = input$metric_msa ) )
+  output$lp.h.1.msa <- renderPlot( lp.plot.hist( df = data_reactive_msa()  , input = input$metric_msa ) )
   
   # tables
-  output$lp.t.1 <- renderTable( lp.tbl( data_reactive_msa(), input = input$metric_msa ) )
+  output$lp.t.1.msa <- renderTable( lp.tbl( data_reactive_msa(), input = input$metric_msa ) )
  
 }
 

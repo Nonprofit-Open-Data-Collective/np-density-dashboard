@@ -118,14 +118,16 @@ d.1 <- readRDS( "01-MSA-Census.rds" )
 # save it for later access without rereunning code:
 
 
-ys.np <- list( 2014, 2015, 2016, 2017, 2018, 2019, 2020, c( 2014:2021) )       # we will index on the years we will subset
-ys.np.nm <- c( "2014", "2015", "2016", "2017", "2018", "2019", "2020", "cum" )
+ys.np <- list( 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, c( 2014:2021 ) )       # we will index on the years we will subset
+ys.np.nm <- c( "2014", "2015", "2016", "2017", "2018", "2019", "2020", "2020", "cum" )
+ys.np.cen <- list( "2014", "2015", "2016", "2017", "2018", "2019", "2020", "2020", "2020" )
+
 b <- list()
 for ( i in 1: length( ys.np ) ){
   
   start.time <- Sys.time()
   
-  dat.yr <- filter( d.1, year == ys.np.nm[i] )   # subset data by year
+  dat.yr <- filter( d.1, year %in% ys.np.cen[[i]] )   # subset data by year
   
 b[[i]] <- npo.sf %>%
   filter( YR %in% ys.np[[i]] ) %>%                # group by tract FIPS for subsequent computation
@@ -138,7 +140,7 @@ b[[i]] <- npo.sf %>%
           dens = ifelse( is.na( dens ), 0, dens ),
           year = ys.np.nm[i] ) %>%  # those still having a "NA" for the density metric are tracts that have 0 population and 0 number of nonprofits (n = 763 instances of 0/0)       
   distinct( GEOID, pop, poverty.rate, med.income, 
-            perc.female, perc.male, n, year, dens )                # keep unique rows (i.e., 1 for each tract)
+            perc.female, perc.male, n, year, YR, dens )                # keep unique rows (i.e., 1 for each tract)
 # this dataset should have same number of rows as d.1 (all census tracts) and no missings
 # in any of the columns
 
@@ -151,6 +153,12 @@ print( paste0( "Iteration ", i, "/", length( ys.np ), " complete" ) )
 
 # bind into single dataset and merge yearly NPO data to yearly census data 
 d.2 <- do.call( "rbind", b )
+
+# since we use 2020 census data for the 2021 NPOs, we need to fix the discrepancy in the year variables
+d.2 <- d.2 %>%
+  mutate( year = ifelse( year == "2020" & YR == "2021", "2021", year ) ) %>%
+  select( -YR )
+
 
 # save for later use 
 setwd( lf )
@@ -184,7 +192,7 @@ sj.dup <- sj[ which( duplicated( sj$GEOID ) ), ]
 ## number of MSA's with > 500k population in 2020
 
 keep.msa.500k <- sj %>%
-  left_join( ., d.2 %>% filter( year == "2020") %>% select( GEOID, pop ) %>% distinct( GEOID, pop ) ) %>%
+  left_join( ., d.1 %>% filter( year == "2020") %>% select( GEOID, pop ) %>% distinct( GEOID, pop ) ) %>%
   group_by( MSA ) %>%
   mutate( sum.pop = sum( pop )) %>%
   ungroup() %>%
@@ -196,9 +204,9 @@ keep.msa.500k <- sj %>%
 ## number of MSAs with > 1.5m population in 2020
 
 keep.msa.1.5m <- sj %>%
-  left_join( ., d.2 %>% filter( year == "2020") %>% select( GEOID, pop ) %>% distinct( GEOID, pop ) ) %>%
+  left_join( ., d.1 %>% filter( year == "2020") %>% distinct( GEOID, pop ) ) %>%
   group_by( MSA ) %>%
-  mutate( sum.pop = sum( pop )) %>%
+  mutate( sum.pop = sum( pop ) ) %>%
   ungroup() %>%
   filter( sum.pop > 1500000 ) %>%
   distinct( MSA ) 
@@ -218,8 +226,8 @@ d.3 <- sj %>%
 
 # merge with tract-level data 
 
-d.4 <- left_join(d.2, d.3, by = "GEOID") %>%      # merge shapefile with tract data
-  filter( MSA %in% d.3$MSA )                      # keep only tracts in the 43 selected MSAs
+d.4 <- st_as_sf( left_join(d.2, d.3, by = "GEOID") %>%      # merge shapefile with tract data
+  filter( MSA %in% d.3$MSA ) )                     # keep only tracts in the 43 selected MSAs
 
 # text process them a bit to make them easier to store and for showing on the Shiny App
 d.4$MSA <- d.4$MSA %>%
@@ -237,6 +245,7 @@ setwd("Dashboard-MSA-Data")
 # dir()
 
 saveRDS( d.4, "USA-MSAs.rds" )
+
 # create LOG file/metadata
 log.head <- c( "Iteration", "MSA", "No.Tracts", "Pop", "No.NPO"," Save.Time" )
 
