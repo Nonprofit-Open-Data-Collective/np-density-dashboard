@@ -203,8 +203,8 @@ ui <- bootstrapPage(
                                          selected = c( "Washington-Arlington-Alexandria" ),
                                          multiple = FALSE) ),
                             
-                            mainPanel( plotOutput( "ptype.msa" , width = "90%", height = 400),
-                                       plotOutput( "lp.h.1.msa" ,width = "90%", height = 200),
+                            mainPanel( plotOutput( "ptype.msa" , width = "90%", height = 360),
+                                       plotOutput( "lp.h.1.msa" ,width = "90%", height = 170),
                                        tableOutput( "lp.t.1.msa" ) )
                             
                           )
@@ -249,7 +249,7 @@ server <- function( input, output ) {
   data_reactive <- reactive(
     {
     
-      if ( input$ptype=="dorling" ) 
+      if ( input$ptype =="dorling" ) 
         { filter( cnties.dorling, year ==  input$yr_select ) }
       else if ( input$ptype=="chloro" ) 
       { filter( cnties, year == input$yr_select ) }
@@ -307,7 +307,7 @@ server <- function( input, output ) {
   output$lp.h.1.msa <- renderPlot( lp.plot.hist( df = data_reactive_msa()  , input = input$metric_msa ) )
   
   # tables
-  output$lp.t.1.msa <- renderTable( lp.tbl( data_reactive_msa(), input = input$metric_msa ) )
+  output$lp.t.1.msa <- renderTable( lp.tbl( df=data_reactive_msa(), input = input$metric_msa ) )
  
 }
 

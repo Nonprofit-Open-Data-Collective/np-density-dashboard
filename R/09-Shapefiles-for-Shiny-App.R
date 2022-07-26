@@ -137,7 +137,8 @@ b[[i]] <- npo.sf %>%
   ungroup() %>%
   mutate( n = ifelse( is.na( n ), 0, n ),                # tracts that have an NA (i.e., tracts not represented in the NCCS data) get allocated 0 new NPOs 
           dens = ( n / pop ) * 1000 ,                    # create NPO density metric (NPOs per 1k in the population)
-          dens = ifelse( is.na( dens ), 0, dens ),
+          dens = ifelse( is.na( dens ), 0, 
+                         ifelse( pop == 0 , 0, dens ) ),
           year = ys.np.nm[i] ) %>%  # those still having a "NA" for the density metric are tracts that have 0 population and 0 number of nonprofits (n = 763 instances of 0/0)       
   distinct( GEOID, pop, poverty.rate, med.income, 
             perc.female, perc.male, n, year, YR, dens )                # keep unique rows (i.e., 1 for each tract)
