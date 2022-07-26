@@ -129,27 +129,27 @@ for ( i in 1: length( ys.np ) ){
   
   dat.yr <- filter( d.1, year %in% ys.np.cen[[i]] )   # subset data by year
   
-b[[i]] <- npo.sf %>%
-  filter( YR %in% ys.np[[i]] ) %>%                # group by tract FIPS for subsequent computation
-  left_join( dat.yr, .) %>%                       # join with Census population data 
-  group_by( GEOID ) %>%
-  mutate( n = ifelse( is.na( n() ) ==T, 0, n( ) ) ) %>%          # count number of rows per tract FIPS since rows are the nonprofits
-  ungroup() %>%
-  mutate( n = ifelse( is.na( n ), 0, n ),                # tracts that have an NA (i.e., tracts not represented in the NCCS data) get allocated 0 new NPOs 
-          dens = ( n / pop ) * 1000 ,                    # create NPO density metric (NPOs per 1k in the population)
-          dens = ifelse( is.na( dens ), 0, 
-                         ifelse( pop == 0 , 0, dens ) ),
-          year = ys.np.nm[i] ) %>%  # those still having a "NA" for the density metric are tracts that have 0 population and 0 number of nonprofits (n = 763 instances of 0/0)       
-  distinct( GEOID, pop, poverty.rate, med.income, 
-            perc.female, perc.male, n, year, YR, dens )                # keep unique rows (i.e., 1 for each tract)
-# this dataset should have same number of rows as d.1 (all census tracts) and no missings
-# in any of the columns
-
-end.time <- Sys.time()
-
-print( end.time - start.time)
-print( paste0( "Iteration ", i, "/", length( ys.np ), " complete" ) ) 
-
+  b[[i]] <- npo.sf %>%
+    filter( YR %in% ys.np[[i]] ) %>%                # group by tract FIPS for subsequent computation
+    left_join( dat.yr, .) %>%                       # join with Census population data 
+    group_by( GEOID ) %>%
+    mutate( n = ifelse( is.na( n() ) ==T, 0, n( ) ) ) %>%          # count number of rows per tract FIPS since rows are the nonprofits
+    ungroup() %>%
+    mutate( n = ifelse( is.na( n ), 0, n ),                # tracts that have an NA (i.e., tracts not represented in the NCCS data) get allocated 0 new NPOs 
+            dens = ( n / pop ) * 1000 ,                    # create NPO density metric (NPOs per 1k in the population)
+            dens = ifelse( is.na( dens ), 0, 
+                           ifelse( pop == 0 , 0, dens ) ),
+            year = ys.np.nm[i] ) %>%  # those still having a "NA" for the density metric are tracts that have 0 population and 0 number of nonprofits (n = 763 instances of 0/0)       
+    distinct( GEOID, pop, poverty.rate, med.income, 
+              perc.female, perc.male, n, year, YR, dens )                # keep unique rows (i.e., 1 for each tract)
+  # this dataset should have same number of rows as d.1 (all census tracts) and no missings
+  # in any of the columns
+  
+  end.time <- Sys.time()
+  
+  print( end.time - start.time)
+  print( paste0( "Iteration ", i, "/", length( ys.np ), " complete" ) ) 
+  
 }
 
 # bind into single dataset and merge yearly NPO data to yearly census data 
@@ -228,7 +228,7 @@ d.3 <- sj %>%
 # merge with tract-level data 
 
 d.4 <- st_as_sf( left_join(d.2, d.3, by = "GEOID") %>%      # merge shapefile with tract data
-  filter( MSA %in% d.3$MSA ) )                     # keep only tracts in the 43 selected MSAs
+                   filter( MSA %in% d.3$MSA ) )                     # keep only tracts in the 43 selected MSAs
 
 # text process them a bit to make them easier to store and for showing on the Shiny App
 d.4$MSA <- d.4$MSA %>%
@@ -247,75 +247,17 @@ setwd("Dashboard-MSA-Data")
 
 saveRDS( d.4, "USA-MSAs.rds" )
 
-# create LOG file/metadata
-log.head <- c( "Iteration", "MSA", "No.Tracts", "Pop", "No.NPO"," Save.Time" )
+# create Dorling Cartogram file
+d.4 <- st_transform( d.4, crs = 3395 ) # ensure data are in compatible projection before using cartogram fct
+# dir.create( "Dorling-Shapefiles" )
 
-write( log.head, file = "MSA-Data-Log.txt", append = F, sep = "\t" )
+setwd( "Dorling-Shapefiles" ) # save sf projection for Dorling Cartogram in a subfolder
+d.4$pop.w <- d.4$pop /  max( d.4$pop, na.rm = T )   # standardizes it by max weight
+d.dorling.msa <- cartogram_dorling( x = d.4, weight = "pop.w" , k = 0.05 ) # projects to Dorling Cartogram
 
-d.3 <- st_transform( d.3, crs = 3395 ) # ensure data are in compatible projection before using cartogram fct
+saveRDS( d.dorling.msa , "USA-MSAs-Dorling.rds" )
 
-
-
-
-
-
-### NOTE: The following loop may take quite a while to run depending on your machine's specifications ###
-
-# loop
-for ( i in 1:length( msa.file ) ) {
-  
-  start.time <- Sys.time()
-  
-  # subset by MSA
-  dat <- d.3[ which( d.3$MSA == msas[i] ), ]
-  
-  # do a spatial intersection to ensure Census tracts touching but outside the boundaries are excluded
-  sub.area <- filter( m, grepl( msas[i], NAME ) ) # obtain cartographic boundary geometries
-  
-  s <- st_within( dat, sub.area ) # spatial overlay
-  
-  these <- map_lgl( s, function( x ) {        # logical for rows to keep
-    if ( length( x ) == 1 ) {
-      return( TRUE )
-    } else {
-      return( FALSE )
-    }
-  } )
-  
-  # final subset to remove boundary Census tracts outside MSA
-  dat <- dat[ these, ]
-  
-  # save in parent dir
-  saveRDS( dat , paste0( msa.file[i], "-MSA.rds" ))
-  
-  ## Dorling Cartogram transformation and save in subfolder
-  
-  setwd( "Dorling-Shapefiles" ) # save sf projection for Dorling Cartogram in a subfolder
-  dat$pop.w <- dat$pop /  max( dat$pop, na.rm = T )   # standardizes it by max weight
-  d.dorling <- cartogram_dorling( x = dat, weight = "pop.w" , k = 0.05 ) # projects to Dorling Cartogram
-  
-  saveRDS( d.dorling , paste0( msa.file[i], "-Dorling.rds" ))
-  
-  setwd( ".." ) # back up to parent dir
-  
-  end.time <- Sys.time()
-  
-  # update log/metadata
-  Iteration <- i
-  MSA <- as.character( levels( factor( dat$MSA ) )[1] )
-  No.Tracts <- as.character( nrow( dat ) )
-  Pop <- as.character( sum( dat$pop, na.rm = T ) )
-  No.NPO <- as.character( sum( dat$n, na.rm = T ) )
-  Save.Time <- as.character( end.time - start.time )
-  log <- c( Iteration, MSA, No.Tracts, Pop, No.NPO, Save.Time)
-  log <- paste( log, collapse = "\t" ) 
-  write( log, file = "MSA-Data-Log.txt", append = T, sep = "\t" )
-  
-  print( end.time - start.time)
-  print( paste0( "Iteration ", i, "/", length( msa.file ), " complete" ) ) 
-  
-}
-
+         
 # --------------------------------------------------------------------------------------------------------
 
 
