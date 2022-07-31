@@ -162,8 +162,7 @@ d.2 <- d.2 %>%
 
 
 # save for later use 
-setwd( lf )
-setwd( "../np-density-dashboard/Data-Wrangled/01-Temp")
+setwd( paste0( lf,"/Dashboard-MSA-Data" ) )   # had to put this in external folder outside of repo given file size
 # saveRDS( d.2, "02-MSA-NPO.rds" )
 
 d.2 <- readRDS( "02-MSA-NPO.rds" )
@@ -247,14 +246,83 @@ setwd("Dashboard-MSA-Data")
 
 saveRDS( d.4, "USA-MSAs.rds" )
 
-# create Dorling Cartogram file
-d.4 <- st_transform( d.4, crs = 3395 ) # ensure data are in compatible projection before using cartogram fct
-# dir.create( "Dorling-Shapefiles" )
 
-setwd( "Dorling-Shapefiles" ) # save sf projection for Dorling Cartogram in a subfolder
-d.4$pop.w <- d.4$pop /  max( d.4$pop, na.rm = T )   # standardizes it by max weight
-d.dorling.msa <- cartogram_dorling( x = d.4, weight = "pop.w" , k = 0.05 ) # projects to Dorling Cartogram
+## Append Dorling Cartogram Geometries from the  DS4PS repository to create Dorling Cartogram file
+# https://github.com/DS4PS/usa-dorling-shapefiles/tree/master/maps/metros-dorling
 
+d.4 <- readRDS( "USA-MSAs.rds" )
+
+dat.msa.nms <- levels(as.factor( d.4$MSA ) )
+
+url.msa.nms <- c( "atlanta-sandy-springs-marietta-ga-dorling-v2","austin-round-rock-tx-dorling-v2",
+                  "baltimore-towson-md-dorling-v2", "boston-quincy-ma-dorling-v2",
+                  "charlotte-gastonia-concord-nc-sc-dorling-v2","chicago-naperville-joliet-il-dorling-v2",
+                  "cincinnati-middletown-oh-ky-in-dorling-v2","cleveland-tn-dorling-v2",
+                  "columbus-oh-dorling-v2","dallas-plano-irving-tx-dorling-v2","denver-aurora-co-dorling-v2",
+                  "detroit-livonia-dearborn-mi-dorling-v2","houston-baytown-sugar-land-tx-dorling-v2",
+                  "indianapolis-in-dorling-v2", "jacksonville-fl-dorling-v2", "kansas-city-mo-ks-dorling-v2",
+                  "las-vegas-paradise-nv-dorling-v2", "los-angeles-long-beach-santa-ana-ca-dorling-v2",
+                  "miami-miami-beach-kendall-fl-dorling-v2", "milwaukee-waukesha-west-allis-wi-dorling-v1",
+                  "minneapolis-st.-paul-bloomington-mn-wi-dorling-v2", "nashville-davidson--murfreesboro-tn-dorling-v2",
+                  "new-york-wayne-white-plains-ny-nj-dorling-v2", "oklahoma-city-ok-dorling-v2",
+                  "orlando-fl-dorling-v2", "philadelphia-pa-dorling-v2", "phoenix-mesa-scottsdale-az-dorling-v2",
+                  "pittsburgh-pa-dorling-v2", "portland-vancouver-beaverton-or-wa-dorling-v2",
+                  "providence-new-bedford-fall-river-ri-m-dorling-v2", "raleigh-cary-nc-dorling-v2",
+                  "riverside-san-bernardino-ontario-ca-dorling-v2", "sacramento--arden-arcade--roseville-ca-dorling-v2",
+                  "san-antonio-tx-dorling-v2", "san-diego-carlsbad-san-marcos-ca-dorling-v2",
+                  "san-francisco-san-mateo-redwood-cityca-dorling-v2", "san-jose-sunnyvale-santa-clara-ca-dorling-v2",
+                  "san-juan-caguas-guaynabo-pr-dorling-v1", "seattle-bellevue-everett-wa-dorling-v1",
+                  "st.-louis-mo-il-dorling-v2", "tampa-st.-petersburg-clearwater-fl-dorling-v2",
+                  "virginia-beach-norfolk-newport-news-va-dorling-v2", "washington-arlington-alexandria-dc-va-dorling-v2")
+
+pref <- "https://raw.githubusercontent.com/DS4PS/usa-dorling-shapefiles/master/maps/metros-dorling/"
+
+
+# for the remaining two MSAs that were not listed in GitHub (due to there being 
+# >1000 files in the repo folder) we will read them in directly after download
+# (these are Virginia Beach and Washington DC MSAs)
+
+urls <- paste0( pref, url.msa.nms, ".geojson")
+
+setwd( paste0( lf, "/Dorling-GeoJson-Files" ) )   # path for Virginia Beach and Washington Dorling Files
+
+st.in <- data.frame()                             # initialize data.frame
+
+for( i in 1:length( url.msa.nms) ){
+  
+  start.time <- Sys.time()
+  
+  # URLs
+  if ( i %in% 1:41 ){
+    
+    in.st <- st_read( urls[i] )                     # read in geoJSON and convert to sf
+    
+  }
+  
+  # physical files in path 
+  if ( i %in% 42:43 ){
+    
+    in.st <- st_read( paste0( url.msa.nms[i], ".geojson" ) ) 
+  }
+  
+  in.st <- st_transform( in.st, crs = 3395 )      # project onto compatible crs
+  
+  in.st$MSA <- dat.msa.nms[i]                     # add MSA name identifier for merge
+  
+  st.in <- st_as_sf( rbind( st.in, in.st[, c( "GEOID", "MSA" ) ] ) )  # bind rows into data.frame and keep only identifier columns
+  
+  st.in$GEOID <- as.character( st.in$GEOID )
+  
+  end.time <- Sys.time()
+  
+  print( end.time - start.time)
+  print( paste0( "Iteration ", i, "/", length( url.msa.nms ), " complete" ) ) 
+  
+}
+
+d.dorling.msa <- st_as_sf( left_join( st_drop_geometry( d.4 ), data.frame( st.in ), by = c( "GEOID", "MSA" ) ) )
+
+setwd( paste0( lf,"/Dashboard-MSA-Data/Dorling-Shapefiles") )
 saveRDS( d.dorling.msa , "USA-MSAs-Dorling.rds" )
 
          

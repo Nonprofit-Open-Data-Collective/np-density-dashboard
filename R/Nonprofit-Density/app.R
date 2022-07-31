@@ -42,13 +42,13 @@ cnties.dorling <- readRDS( "USA-Counties-Dorling.rds" )
 
 setwd( paste0( main, "np-density-dashboard/Data-Rodeo/Dashboard-MSA-Data/" ) )
 
-msas <- readRDS( "USA-MSAs.rds" )
+msas <- upd.d
 
 ## MSA Dorling Shapefile
 
 setwd( paste0( main, "np-density-dashboard/Data-Rodeo/Dashboard-MSA-Data/Dorling-Shapefiles" ) )
 
-# msas.dorling <- readRDS( "USA-MSAs-Dorling.rds" )
+msas.dorling <- readRDS( "USA-MSAs-Dorling.rds" )
 
 
 ### Plotting Functions ###
@@ -205,7 +205,7 @@ ui <- bootstrapPage(
                             
                             mainPanel( plotOutput( "ptype.msa" , width = "90%", height = 360),
                                        plotOutput( "lp.h.1.msa" ,width = "90%", height = 170),
-                                       tableOutput( "lp.t.1.msa" ) )
+                                       fluidRow( tableOutput( "lp.t.1.msa" ) ) )
                             
                           )
                       )
@@ -261,7 +261,7 @@ server <- function( input, output ) {
     {
       
       if (input$ptype_msa=="dorling") 
-      { filter( msas, year ==  input$yr_select_msa & MSA == input$msa ) }
+      { filter( msas.dorling, year ==  input$yr_select_msa & MSA == input$msa ) }
       else if (input$ptype_msa=="chloro") 
       { filter( msas, year == input$yr_select_msa & MSA == input$msa ) }
     }
@@ -298,7 +298,7 @@ server <- function( input, output ) {
   output$ptype.msa <- renderPlot( {
     switch(input$ptype_msa,
            "chloro" = lp.plot.chloro( df = msas %>% filter( year == input$yr_select_msa & MSA == input$msa ), input = input$metric_msa  ),
-           "dorling" = lp.plot.chloro( df = msas %>% filter( year == input$yr_select_msa  & MSA == input$msa ), input = input$metric_msa ) )
+           "dorling" = lp.plot.chloro( df = msas.dorling %>% filter( year == input$yr_select_msa  & MSA == input$msa ), input = input$metric_msa ) )
   }
   
   )
