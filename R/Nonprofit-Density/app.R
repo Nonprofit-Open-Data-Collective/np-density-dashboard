@@ -18,6 +18,9 @@ source('/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial 
 # Import counties landing page map
 main <- "/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/"
 
+lf <- "/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/Large-Files-Bank"
+
+
 setwd( paste0( main, "np-density-dashboard/Data-Rodeo/Dashboard-County-Data/" ) )
 
 ##  County Standard Projection Shapefile
@@ -40,13 +43,13 @@ cnties.dorling <- readRDS( "USA-Counties-Dorling.rds" )
 
 ## MSA Standard Projection Shapefile
 
-setwd( paste0( main, "np-density-dashboard/Data-Rodeo/Dashboard-MSA-Data/" ) )
+setwd( paste0( lf,"/Dashboard-MSA-Data/") )
 
-msas <- upd.d
+msas <- readRDS( "USA-MSAs.rds" )
 
 ## MSA Dorling Shapefile
 
-setwd( paste0( main, "np-density-dashboard/Data-Rodeo/Dashboard-MSA-Data/Dorling-Shapefiles" ) )
+setwd( paste0( lf,"/Dashboard-MSA-Data/Dorling-Shapefiles") )
 
 msas.dorling <- readRDS( "USA-MSAs-Dorling.rds" )
 
