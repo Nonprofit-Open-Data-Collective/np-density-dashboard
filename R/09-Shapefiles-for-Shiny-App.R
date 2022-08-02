@@ -243,8 +243,11 @@ d.4$MSA <- d.4$MSA %>%
 ### BUG FIX: ORIGINALLY, TRACTS WITH 0 NEW NPOS WERE SET TO MISSING AND NOT ILLUSTRATED ON THE MAPS
 ### THE FOLLOWING LOOP RECITIFIES THAT ISSUE
 
+# the cumulative subset of the data frame has all census tracts present, so we will use it to rectify those years
+# with missing census tracts
 t.all <- d.4 %>% filter( year == "cum" ) %>%
   arrange( MSA )
+
 # make a copy of the last version of the dataset before running loop
 d.5 <- d.4
 
@@ -268,13 +271,14 @@ for ( i in 1:length( yrs ) ){          # outer loop indexing on years
     # find non-intersecting GEOIDs
     id.1 <- less$GEOID[ which( less$GEOID %notin% yr.sub$GEOID ) ]
     
-    # get their data
+    # get their data and prepare for binding to original data.frame/shapefile
     these.rows <- less %>% 
       filter( GEOID %in% id.1 ) %>%
       mutate( n = 0,
               dens = 0,                  # assign them "0"
               year = yrs[i] )            # assign year accordingly      
     
+    # bind to input data.frame/shapefile and loop
     d.5 <- rbind( d.5, these.rows ) %>%
       arrange( MSA, year )
     
@@ -285,12 +289,6 @@ for ( i in 1:length( yrs ) ){          # outer loop indexing on years
     
     
   }
-  
-  end.time <- Sys.time()
-  
-  print( end.time - start.time)
-  print( paste0( "Outer loop: Iteration ", i, "/", length( yrs ), " complete" ) ) 
-  
   
 }
 
