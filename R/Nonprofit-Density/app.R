@@ -151,8 +151,8 @@ ui <- bootstrapPage(
                                            selected = c("Density" ),
                                            multiple = FALSE) ),
                             
-                            mainPanel( plotOutput( "ptype" , width = "90%", height = 400),
-                                       plotOutput( "lp.h.1" ,width = "90%", height = 200),
+                            mainPanel( plotOutput( "ptype" , width = "90%", height = 400 ),
+                                       plotOutput( "lp.h.1" ,width = "90%", height = 200 ),
                                        tableOutput( "lp.t.1" ) )
                             
                           )

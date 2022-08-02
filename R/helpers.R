@@ -1,4 +1,9 @@
 
+########## %notIn% operator #########
+`%notin%` <- Negate(`%in%`)
+
+
+########## cutting function #########
 quant.cut<-function(var,x,df){
 xvec<-vector()
 for (i in 1:x){

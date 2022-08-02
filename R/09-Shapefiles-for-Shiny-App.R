@@ -160,9 +160,10 @@ d.2 <- d.2 %>%
   mutate( year = ifelse( year == "2020" & YR == "2021", "2021", year ) ) %>%
   select( -YR )
 
-
+# now fix issue with census tracts nested within individual years missing all observations due to 0
 # save for later use 
-setwd( paste0( lf,"/Dashboard-MSA-Data" ) )   # had to put this in external folder outside of repo given file size
+setwd( lf )   # had to put this in external folder outside of repo given file size
+setwd( "../np-density-dashboard/Data-Wrangled/01-Temp")
 # saveRDS( d.2, "02-MSA-NPO.rds" )
 
 d.2 <- readRDS( "02-MSA-NPO.rds" )
@@ -226,8 +227,10 @@ d.3 <- sj %>%
 
 # merge with tract-level data 
 
-d.4 <- st_as_sf( left_join(d.2, d.3, by = "GEOID") %>%      # merge shapefile with tract data
-                   filter( MSA %in% d.3$MSA ) )                     # keep only tracts in the 43 selected MSAs
+d.4 <- st_as_sf( left_join( d.2, d.3, by = "GEOID") %>%     # merge shapefile with tract data
+                   filter( MSA %in% d.3$MSA ) %>%           # keep only tracts in the 43 selected MSAs
+                   distinct() )                             # delete duplicates
+  
 
 # text process them a bit to make them easier to store and for showing on the Shiny App
 d.4$MSA <- d.4$MSA %>%
@@ -236,21 +239,70 @@ d.4$MSA <- d.4$MSA %>%
   str_remove( ., "\\." ) %>%             # remove any "." from the strings
   str_replace( ., "\\s", "-" )           # run again because we still have some white spaces that have not been replaced
 
-setwd( lf )
-setwd("../np-density-dashboard/Data-Rodeo")
-# dir.create( "Dashboard-MSA-Data" )
-# dir()
-setwd("Dashboard-MSA-Data")
-# dir.create( "Dorling-Shapefiles" ) # create subfolder to store Dorling Cartogram sf objects
-# dir()
 
-saveRDS( d.4, "USA-MSAs.rds" )
+### BUG FIX: ORIGINALLY, TRACTS WITH 0 NEW NPOS WERE SET TO MISSING AND NOT ILLUSTRATED ON THE MAPS
+### THE FOLLOWING LOOP RECITIFIES THAT ISSUE
+
+t.all <- d.4 %>% filter( year == "cum" ) %>%
+  arrange( MSA )
+# make a copy of the last version of the dataset before running loop
+d.5 <- d.4
+
+yrs <- levels( as.factor( d.4$year ) ) # index on years
+msas <- levels( as.factor( d.4$MSA ) ) # second index on MSA
+
+for ( i in 1:length( yrs ) ){          # outer loop indexing on years
+  
+  start.time <- Sys.time()
+  
+  
+  for ( j in 1:length( msas ) ) {      # inner loop, indexing on MSAS
+    
+    start.time <- Sys.time()
+    
+    yr.sub <- d.4 %>% filter( year == yrs[i] & MSA == msas[j] ) %>% select( GEOID, MSA, n ) 
+    
+    
+    less <- t.all %>% filter( MSA == msas[j] )
+    
+    # find non-intersecting GEOIDs
+    id.1 <- less$GEOID[ which( less$GEOID %notin% yr.sub$GEOID ) ]
+    
+    # get their data
+    these.rows <- less %>% 
+      filter( GEOID %in% id.1 ) %>%
+      mutate( n = 0,
+              dens = 0,                  # assign them "0"
+              year = yrs[i] )            # assign year accordingly      
+    
+    d.5 <- rbind( d.5, these.rows ) %>%
+      arrange( MSA, year )
+    
+    end.time <- Sys.time()
+    
+    print( end.time - start.time)
+    print( paste0( "Outer loop: iteration: ", i, "/", length( yrs ), ", Inner loop: Iteration ", j, "/", length( msas ), " complete" ) ) 
+    
+    
+  }
+  
+  end.time <- Sys.time()
+  
+  print( end.time - start.time)
+  print( paste0( "Outer loop: Iteration ", i, "/", length( yrs ), " complete" ) ) 
+  
+  
+}
+
+setwd( paste0( lf, "/Dashboard-MSA-Data" ) )   # had to put this in external folder outside of repo given file size
+
+saveRDS( d.5, "USA-MSAs.rds" )
 
 
-## Append Dorling Cartogram Geometries from the  DS4PS repository to create Dorling Cartogram file
+## Append Dorling Cartogram Geometries from the DS4PS repository to create Dorling Cartogram file
 # https://github.com/DS4PS/usa-dorling-shapefiles/tree/master/maps/metros-dorling
 
-d.4 <- readRDS( "USA-MSAs.rds" )
+d.5 <- readRDS( "USA-MSAs.rds" )
 
 dat.msa.nms <- levels(as.factor( d.4$MSA ) )
 
@@ -275,6 +327,7 @@ url.msa.nms <- c( "atlanta-sandy-springs-marietta-ga-dorling-v2","austin-round-r
                   "st.-louis-mo-il-dorling-v2", "tampa-st.-petersburg-clearwater-fl-dorling-v2",
                   "virginia-beach-norfolk-newport-news-va-dorling-v2", "washington-arlington-alexandria-dc-va-dorling-v2")
 
+# URL prefix for loading in Dorling geojson files
 pref <- "https://raw.githubusercontent.com/DS4PS/usa-dorling-shapefiles/master/maps/metros-dorling/"
 
 
@@ -303,6 +356,7 @@ for( i in 1:length( url.msa.nms) ){
   if ( i %in% 42:43 ){
     
     in.st <- st_read( paste0( url.msa.nms[i], ".geojson" ) ) 
+    
   }
   
   in.st <- st_transform( in.st, crs = 3395 )      # project onto compatible crs
