@@ -148,14 +148,21 @@ for( i in 1:10){
 sum(is.na(npo.ppl$lon.npo)) # 167 missing coordinates
 sum(is.na(npo.ppl$lat.npo))
 
-# remove NAs otherwise st_as_sf can't generate sf file
-# put data back into long format for sf (geometries will be lines for each row
-# representing a line between the NPO and the BM coordinates)
-no.na <- npo.ppl%>%
-  filter( !is.na( lon.npo ) ) %>%
-  mutate( bm = paste0( "BM.", bm.tails[i] ),
+
+out.npo.ppl <- data.frame()
+# the following loop will take some depending on your machine's specifications
+for ( i in 1:10 ){
+  
+  start.time <- Sys.time()
+  
+  # remove NAs otherwise st_as_sf can't generate sf file
+  # put data back into long format for sf (geometries will be lines for each row
+  # representing a line between the NPO and the BM coordinates)
+  no.na <- npo.ppl%>%
+    filter( !is.na( lon.npo ) ) %>%
+    mutate( bm = paste0( "BM.", bm.tails[i] ),
           id = row_number() ) %>%
-  select( GEOID,
+    select( GEOID,
           Case.Number,
           id,
           bm,
@@ -173,32 +180,41 @@ no.na <- npo.ppl%>%
 # `data.table` way: This code was modified from the reproducible example online:
 # https://newbedev.com/r-create-linestring-from-two-points-in-same-row-in-dataframe
 
-dt <- as.data.table(no.na)
+dt <- as.data.table( no.na )
+  
+  dt1 <- dt[, .(id, lon = get( paste0( "lon.BM.", bm.tails[i] ) ), lat =  get( paste0( "lat.BM.", bm.tails[i] ) ) )]
+  dt2 <- dt[, .(id, lon = get( "lon.npo" ), lat = get( "lat.npo" ) )]
 
-dt1 <- dt[, .(id, lon = lon.BM.01, lat = lat.BM.01)]
-dt2 <- dt[, .(id, lon = lon.npo, lat = lat.npo)]
+  ## Add on a 'sequence' variable so we know which one comes first
+  dt1[, seq := 1L ]
+  dt2[, seq := 2L ]
 
-## Add on a 'sequence' variable so we know which one comes first
-dt1[, seq := 1L ]
-dt2[, seq := 2L ]
+  ## put back together
+  dt <- rbindlist(list(dt1, dt2), use.names = TRUE)
+  setorder(dt, id, seq)
 
-## put back together
-dt <- rbindlist(list(dt1, dt2), use.names = TRUE)
-setorder(dt, id, seq)
-
-sf <- sfheaders::sf_linestring(
-  obj = dt
-  , x = "lon"
-  , y = "lat"
-  , linestring_id = "id"
-)
+  sf <- sfheaders::sf_linestring(
+    obj = dt,
+    x = "lon",
+    y = "lat",
+    linestring_id = "id" )
 
 
-out.line.sf <- st_as_sf( left_join( bind.dt, sf, by = "id" ) )
+  out.line.sf <- st_as_sf( left_join( bind.dt, sf, by = "id" ) )
+
+  out.npo.ppl <- rbind( out.npo.ppl, out.line.sf )
+
+
+  end.time <- Sys.time()
+
+  print( end.time - start.time)
+  print( paste0( "Iteration ", i, "/", 10, " complete" ) ) 
+
+}
 
 cn.lev <- levels( as.factor(out.line.sf$Case.Number ) )
-(d <- out.line.sf %>% filter( Case.Number == cn.lev[109] ))
-ggplot( )+
+(d <- out.npo.ppl %>% filter( Case.Number == cn.lev[109] ))
+ggplot( ) +
   geom_sf( data = st_geometry(d), lwd = 1, lineend = "round" ) 
 
 plot(st_geometry(d), lwd = 1, lineend = "round")
