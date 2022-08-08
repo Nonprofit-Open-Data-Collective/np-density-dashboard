@@ -1,13 +1,21 @@
+###--------------------------------------------------------------
+###   09-SHAPEFILES FOR BOARDMEMBER(BM) DATA AND SPATIAL GRIDS
+###--------------------------------------------------------------
+
+# ---------------------------------------------------------------------------------------------------------------------------------------------------------
+# 
+# In this script, we will generate some general shapefiles (to be stored as .rds) that will be used for
+# generating the spatial grids in the dashboard. The idea will be to get all the NPO and PPL data
+# into a single row so that we can then use the `distHaversine` function in the `geosphere` package
+# to compute Haversine distances between the NPO and BM addresses. 
+#
+# Input data:  'NONPROFITS-2014-2021v7.rds' , 'PEOPLE-2014-2021v6.rds'
+# Out data: 
+# ---------------------------------------------------------------------------------------------------------------------------------------------------------
 
 library( tidyverse )
-library( urbnmapr )         # state/county shapefiles
 library( sf )               # simple features framework     
-library( tigris )           # TIGER shapefiles
-library( tidycensus )       # Census data queries
-library( cartogram )        # Create sf objects for Dorling Cartograms
-options( tigris_class = "sf" )
-options( tigris_use_cache = TRUE )
-
+library( geosphere )
 source('/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/np-density-dashboard/R/helpers.R')
 
 
@@ -90,6 +98,49 @@ npo.ppl <- left_join( npo.distinct, ppl.wide )
 
 ### Use data to calculate distances and make a sample spatial grid ###
 
+# test the function using NPO location and BM 1 coordinates
+mypts.npo <- data.frame( npo.ppl$lon.npo,npo.ppl$lat.npo )    # lon goes first and lat goes second in the data.frame
+mypts.bm1<- data.frame( npo.ppl$lon.BM.1, npo.ppl$lat.BM.1 )
+
+
+dis.miles <- distHaversine( p1 = mypts.npo,
+               p2 = mypts.bm1 )*0.0006213711 # convert default meters to miles
+
+dis.meters <- distHaversine( p1 = mypts.npo,
+                          p2 = mypts.bm1 )
+
+
+## Loop for all board members
+
+# ensure this is run before loop:
+mypts.npo <- data.frame( npo.ppl$lon.npo,npo.ppl$lat.npo )    
+
+
+for( i in 1:10){
+  
+  
+  start.time <- Sys.time()
+  
+  
+  # select correct columns for respective board member
+  mypts.bm <- data.frame( eval( parse( text = ( paste0( "npo.ppl$lon.BM.", i ) ) ) ), 
+                          eval( parse( text = ( paste0( "npo.ppl$lat.BM.", i ) ) ) ) )
+  
+  npo.ppl[[ paste0( "dist.BM.", i, ".miles" ) ]] <- distHaversine( p1 = mypts.npo,
+                              p2 = mypts.bm1 )*0.0006213711 # convert default meters to miles
+  
+  npo.ppl[[ paste0( "dist.BM.", i, ".meters" ) ]] <- distHaversine( p1 = mypts.npo,
+                                                                            p2 = mypts.bm1 )
+  
+  
+  end.time <- Sys.time()
+  
+  print( end.time - start.time)
+  print( paste0( "Iteration ", i, "/", 10, " complete" ) ) 
+  
+  
+  
+}
 
 
 
