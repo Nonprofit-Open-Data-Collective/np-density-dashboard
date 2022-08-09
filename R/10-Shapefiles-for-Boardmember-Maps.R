@@ -17,6 +17,8 @@ library( tidyverse )
 library( sf )               # simple features framework     
 library( geosphere )
 library( data.table )       # for manipulating data for plotting BM to NPO
+library( rlang )
+
 source('/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/np-density-dashboard/R/helpers.R')
 
 
@@ -149,7 +151,7 @@ sum(is.na(npo.ppl$lon.npo)) # 167 missing coordinates
 sum(is.na(npo.ppl$lat.npo))
 
 
-out.npo.ppl <- data.frame()
+out.npo.ppl <- list()
 # the following loop will take some depending on your machine's specifications
 for ( i in 1:10 ){
   
@@ -180,29 +182,38 @@ for ( i in 1:10 ){
 # `data.table` way: This code was modified from the reproducible example online:
 # https://newbedev.com/r-create-linestring-from-two-points-in-same-row-in-dataframe
 
-dt <- as.data.table( no.na )
+dt.a <- as.data.table( no.na )
   
-  dt1 <- dt[, .(id, lon = get( paste0( "lon.BM.", bm.tails[i] ) ), lat =  get( paste0( "lat.BM.", bm.tails[i] ) ) )]
-  dt2 <- dt[, .(id, lon = get( "lon.npo" ), lat = get( "lat.npo" ) )]
+  dt1 <- dt.a[, .(id, lon = get( paste0( "lon.BM.", bm.tails[i] ) ), lat =  get( paste0( "lat.BM.", bm.tails[i] ) ) )]
+  dt2 <- dt.a[, .(id, lon = get( "lon.npo" ), lat = get( "lat.npo" ) )]
 
   ## Add on a 'sequence' variable so we know which one comes first
   dt1[, seq := 1L ]
   dt2[, seq := 2L ]
 
   ## put back together
-  dt <- rbindlist(list(dt1, dt2), use.names = TRUE)
-  setorder(dt, id, seq)
+  dt.b <- rbindlist( list( dt1, dt2 ), use.names = TRUE )
+  setorder( dt.b, id, seq )
 
   sf <- sfheaders::sf_linestring(
-    obj = dt,
+    obj = dt.b,
     x = "lon",
     y = "lat",
     linestring_id = "id" )
 
 
-  out.line.sf <- st_as_sf( left_join( bind.dt, sf, by = "id" ) )
+  out.line.sf <- left_join( as.data.frame( dt.a ), sf, by = "id" )
 
-  out.npo.ppl <- rbind( out.npo.ppl, out.line.sf )
+  out.npo.ppl[[i]] <- out.line.sf %>% 
+    arrange( Case.Number ) %>%                                            # arrange data by NPO
+    distinct( Case.Number, 
+              bm, 
+              lon.bm = !!rlang::parse_expr( paste0( "lon.BM.", bm.tails[i] ) ), 
+              lat.bm = !!rlang::parse_expr( paste0( "lat.BM.", bm.tails[i] ) ),
+              lon.npo,
+              lat.npo,
+              geometry ) %>%                                              # delete duplicates
+    filter( !is.na( !!rlang::parse_expr( "lon.bm" ) ) )                   # remove those with missing values which would indicate they don't have a BM at that position
 
 
   end.time <- Sys.time()
@@ -212,10 +223,23 @@ dt <- as.data.table( no.na )
 
 }
 
-cn.lev <- levels( as.factor(out.line.sf$Case.Number ) )
-(d <- out.npo.ppl %>% filter( Case.Number == cn.lev[109] ))
+
+# convert dataset to sf
+d <- st_as_sf( do.call( "rbind", out.npo.ppl ) )
+
+# save
+setwd( paste0( lf, "/10-Spatial-Grid-Data" ) )
+saveRDS( d, "BM-NPO-Spatial-Grid.rds")
+
+
+
+# Example Spatial grid
+cn.lev <- levels( as.factor(d$Case.Number ) )
+
+(d.plot <- d %>% filter( Case.Number == cn.lev[110] ) )
+
 ggplot( ) +
-  geom_sf( data = st_geometry(d), lwd = 1, lineend = "round" ) 
+  geom_sf( data = d.plot, lwd = 0.3, lineend = "round" ) +theme_classic()
 
 plot(st_geometry(d), lwd = 1, lineend = "round")
 
