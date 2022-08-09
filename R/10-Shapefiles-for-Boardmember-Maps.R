@@ -12,7 +12,7 @@
 # respective NPO.
 #
 # Input data:  'NONPROFITS-2014-2021v7.rds' , 'PEOPLE-2014-2021v6.rds'
-# Out data: 
+# Out data: "BM-NPO-Spatial-Grid.rds"
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------
 
 library( tidyverse )
@@ -229,15 +229,14 @@ dt.a <- as.data.table( no.na )
 # convert dataset to sf
 d <- st_as_sf( do.call( "rbind", out.npo.ppl ) )
 
-# merge distance to NPO data
-
+# merge distance data to NPO data
 d.f <- npo.ppl %>%
   pivot_longer( cols = contains( "miles" ), names_to = "bm", values_to = "miles" ) %>% # pivot longer
-  select( miles, bm, Case.Number) %>%
+  select( miles, bm, Case.Number, ORGNAME ) %>%
   mutate( bm = str_remove_all( str_remove_all( bm, "\\.miles" ), "dist\\." ) ) %>%     # text process `bm` column
   left_join(d, ., by = c("bm", "Case.Number" ) ) %>%  # join to BM-NPO data
   group_by( Case.Number ) %>%
-  mutate( avg.miles = mean( miles, na.rm = T ) )      # compute average miles to NPO within organizations
+  mutate( avg.miles = mean( miles, na.rm = T ) )          # compute average miles to NPO within organizations
 
 # save
 setwd( paste0( lf, "/10-Spatial-Grid-Data" ) )
@@ -266,12 +265,17 @@ current.bbox[4] <- current.bbox[4] + (0.4 * yrange) # ymax - top
 
 # average distance label
 avg.label <- paste0( "Mean Distance: ", unique( round( d.plot$avg.miles, 2) ), " miles" )
+org.title <- paste0( "Org Name: ", unique( d.plot$ORGNAME ) )
+
 # plot
 ggplot( d.plot ) +
   geom_sf( lwd = 0.3, lineend = "round" ) +
   theme_classic()+
-  geom_sf_text( data = d.plot, aes( label = miles) ) +
-  annotate( "text", -Inf, Inf, label = avg.label, hjust = -0.08, vjust = 1 )+
+  ggtitle( org.title ) +
+  annotate( "text", -Inf, Inf, label = avg.label, hjust = -0.08, vjust = 1 ) +
+  annotate( "text", -83.65505, 40.66292, label = "8.06 miles", size = 2.5, vjust = 2 ) +
+  annotate( "text", -83.51111, 40.53398, label = "18.6 miles", size = 2.5, vjust = 2 ) +
+  annotate( "text", -83.65196, 40.77841, label = "0.26 miles", size = 2.5, vjust = 2 ) +
   coord_sf( xlim = c( current.bbox[1], current.bbox[3] ), ylim = c( current.bbox[2], current.bbox[4] ) ) # boundaries
 
 plot(st_geometry(d), lwd = 1, lineend = "round")
