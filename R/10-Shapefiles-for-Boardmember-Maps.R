@@ -7,7 +7,9 @@
 # In this script, we will generate some general shapefiles (to be stored as .rds) that will be used for
 # generating the spatial grids in the dashboard. The idea will be to get all the NPO and PPL data
 # into a single row so that we can then use the `distHaversine` function in the `geosphere` package
-# to compute Haversine distances between the NPO and BM addresses. 
+# to compute Haversine distances between the NPO and BM addresses. The final dataset consists of a row corresponding to
+# single board member with a stringline geometry that represents the line between the boardmember's home and their
+# respective NPO.
 #
 # Input data:  'NONPROFITS-2014-2021v7.rds' , 'PEOPLE-2014-2021v6.rds'
 # Out data: 
@@ -227,9 +229,17 @@ dt.a <- as.data.table( no.na )
 # convert dataset to sf
 d <- st_as_sf( do.call( "rbind", out.npo.ppl ) )
 
+# merge distance to NPO data
+
+d.f <- npo.ppl %>%
+  pivot_longer( cols = contains( "miles" ), names_to = "bm", values_to = "miles" ) %>% # pivot longer
+  select( miles, bm, Case.Number) %>%
+  mutate( bm = str_remove_all( str_remove_all( bm, "\\.miles" ), "dist\\." ) ) %>%     # text process `bm` column
+  left_join(d, ., by = c("bm", "Case.Number" ) )   # join to BM-NPO data
+
 # save
 setwd( paste0( lf, "/10-Spatial-Grid-Data" ) )
-saveRDS( d, "BM-NPO-Spatial-Grid.rds")
+saveRDS( d.f, "BM-NPO-Spatial-Grid.rds")
 
 
 
