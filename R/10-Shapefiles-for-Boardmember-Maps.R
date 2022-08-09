@@ -133,10 +133,10 @@ for( i in 1:10){
                           eval( parse( text = ( paste0( "npo.ppl$lat.BM.", bm.tails[i] ) ) ) ) )
   
   npo.ppl[[ paste0( "dist.BM.", bm.tails[i], ".miles" ) ]] <- distHaversine( p1 = mypts.npo,
-                              p2 = mypts.bm1 )*0.0006213711 # convert default meters to miles
+                              p2 = mypts.bm )*0.0006213711 # convert default meters to miles
   
   npo.ppl[[ paste0( "dist.BM.", bm.tails[i], ".meters" ) ]] <- distHaversine( p1 = mypts.npo,
-                                                                            p2 = mypts.bm1 )
+                                                                            p2 = mypts.bm )
   
   
   end.time <- Sys.time()
@@ -246,10 +246,13 @@ saveRDS( d.f, "BM-NPO-Spatial-Grid.rds")
 # Example Spatial grid
 cn.lev <- levels( as.factor(d$Case.Number ) )
 
-(d.plot <- d %>% filter( Case.Number == cn.lev[110] ) )
+(d.plot <- d.f %>% filter( Case.Number == cn.lev[110] ) %>%
+    mutate( miles = round( miles, 2 ) ) )
 
-ggplot( ) +
-  geom_sf( data = d.plot, lwd = 0.3, lineend = "round" ) +theme_classic()
+ggplot( d.plot ) +
+  geom_sf( lwd = 0.3, lineend = "round" ) +
+  theme_classic()+
+  geom_sf_text(data= d.plot, aes(label = miles))
 
 plot(st_geometry(d), lwd = 1, lineend = "round")
 
