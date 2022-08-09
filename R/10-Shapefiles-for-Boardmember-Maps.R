@@ -235,7 +235,9 @@ d.f <- npo.ppl %>%
   pivot_longer( cols = contains( "miles" ), names_to = "bm", values_to = "miles" ) %>% # pivot longer
   select( miles, bm, Case.Number) %>%
   mutate( bm = str_remove_all( str_remove_all( bm, "\\.miles" ), "dist\\." ) ) %>%     # text process `bm` column
-  left_join(d, ., by = c("bm", "Case.Number" ) )   # join to BM-NPO data
+  left_join(d, ., by = c("bm", "Case.Number" ) ) %>%  # join to BM-NPO data
+  group_by( Case.Number ) %>%
+  mutate( avg.miles = mean( miles, na.rm = T ) )      # compute average miles to NPO within organizations
 
 # save
 setwd( paste0( lf, "/10-Spatial-Grid-Data" ) )
@@ -249,10 +251,28 @@ cn.lev <- levels( as.factor(d$Case.Number ) )
 (d.plot <- d.f %>% filter( Case.Number == cn.lev[110] ) %>%
     mutate( miles = round( miles, 2 ) ) )
 
+# alter boundary coordinates 
+# get current bounding box
+current.bbox <- st_bbox( d.plot )
+
+xrange <- current.bbox$xmax - current.bbox$xmin # range of x values
+yrange <- current.bbox$ymax - current.bbox$ymin # range of y values
+
+current.bbox[1] <- current.bbox[1] - (0.4 * xrange) # xmin - left
+current.bbox[3] <- current.bbox[3] + (0.4 * xrange) # xmax - right
+current.bbox[2] <- current.bbox[2] - (0.4 * yrange) # ymin - bottom
+current.bbox[4] <- current.bbox[4] + (0.4 * yrange) # ymax - top
+
+
+# average distance label
+avg.label <- paste0( "Mean Distance: ", unique( round( d.plot$avg.miles, 2) ), " miles" )
+# plot
 ggplot( d.plot ) +
   geom_sf( lwd = 0.3, lineend = "round" ) +
   theme_classic()+
-  geom_sf_text(data= d.plot, aes(label = miles))
+  geom_sf_text( data = d.plot, aes( label = miles) ) +
+  annotate( "text", -Inf, Inf, label = avg.label, hjust = -0.08, vjust = 1 )+
+  coord_sf( xlim = c( current.bbox[1], current.bbox[3] ), ylim = c( current.bbox[2], current.bbox[4] ) ) # boundaries
 
 plot(st_geometry(d), lwd = 1, lineend = "round")
 
