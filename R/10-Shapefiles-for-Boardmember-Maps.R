@@ -272,11 +272,69 @@ ggplot( d.plot ) +
   geom_sf( lwd = 0.3, lineend = "round" ) +
   theme_classic()+
   ggtitle( org.title ) +
-  annotate( "text", -Inf, Inf, label = avg.label, hjust = -0.08, vjust = 1 ) +
-  annotate( "text", -83.65505, 40.66292, label = "8.06 miles", size = 2.5, vjust = 2 ) +
-  annotate( "text", -83.51111, 40.53398, label = "18.6 miles", size = 2.5, vjust = 2 ) +
-  annotate( "text", -83.65196, 40.77841, label = "0.26 miles", size = 2.5, vjust = 2 ) +
-  coord_sf( xlim = c( current.bbox[1], current.bbox[3] ), ylim = c( current.bbox[2], current.bbox[4] ) ) # boundaries
+  annotate( "text", -Inf, Inf, label = avg.label, hjust = -0.08, vjust = 1, family = "Avenir" ) +
+  annotate( "text", -83.65505, 40.66292, label = "8.06 miles", size = 2.5, vjust = 2, family = "Avenir" ) +
+  annotate( "text", -83.51111, 40.53398, label = "18.6 miles", size = 2.5, vjust = 2, family = "Avenir" ) +
+  annotate( "text", -83.65196, 40.77841, label = "0.26 miles", size = 2.5, vjust = 2, family = "Avenir" ) +
+  coord_sf( xlim = c( current.bbox[1], current.bbox[3] ), ylim = c( current.bbox[2], current.bbox[4] ) ) + # boundaries
+  theme( text = element_text( family = "Avenir" ) ) +
+  xlab( "Longitude" ) + 
+  ylab( "Latitude" )
 
-plot(st_geometry(d), lwd = 1, lineend = "round")
+
+
+# Function to generalize to any data subset
+spatial_grid <- function( df ){
+  
+  # alter boundary coordinates 
+  # get current bounding box
+  current.bbox <- st_bbox( df )
+  
+  xrange <- current.bbox$xmax - current.bbox$xmin # range of x values
+  yrange <- current.bbox$ymax - current.bbox$ymin # range of y values
+  
+  current.bbox[1] <- current.bbox[1] - (0.4 * xrange) # xmin - left
+  current.bbox[3] <- current.bbox[3] + (0.4 * xrange) # xmax - right
+  current.bbox[2] <- current.bbox[2] - (0.4 * yrange) # ymin - bottom
+  current.bbox[4] <- current.bbox[4] + (0.4 * yrange) # ymax - top
+  
+  
+  # average distance label and organization name
+  avg.label <- paste0( "Mean Distance: ", unique( round( df$avg.miles, 2) ), " miles" )
+  org.title <- paste0( "Org Name: ", unique( df$ORGNAME ) )
+  
+  df.df <- data.frame( df )
+  
+  ann.list <- list()               # list to hold annotations
+  for (i in 1: nrow( df ) ){
+    
+    # lat/lon positions for text
+    assign( paste0( "bm.label.lon.", i ), df.df[ i, "lon.bm"] )
+    assign( paste0( "bm.label.lat.", i ), df.df[ i, "lat.bm"] )
+    
+    # labels
+    assign( paste0( "bm.label.mile.", i ), paste0( df.df[ i, "miles"] ) )
+    
+    # annotations in ggplot to write labels
+    ann.list[[i]] <- paste0( "annotate( 'text', bm.label.lon.", i , ", bm.label.lat.", i , ", label = bm.label.mile.", i,", size = 2.5, vjust = 2, family = 'Avenir' ) +" )
+    
+    
+  }
+  
+  
+  eval( parse( text = paste0( 'ggplot( df ) +
+    geom_sf( lwd = 0.3, lineend = "round" ) +
+    theme_classic()+
+    ggtitle( org.title ) +
+    annotate( "text", -Inf, Inf, label = avg.label, hjust = -0.08, vjust = 1, family = "Avenir" ) +',
+                              do.call( 'paste0', ann.list ),
+                              'coord_sf( xlim = c( current.bbox[1], current.bbox[3] ), ylim = c( current.bbox[2], current.bbox[4] ) ) + # boundaries
+    theme( text = element_text( family = "Avenir" ) ) +
+    xlab( "Longitude" ) + 
+    ylab( "Latitude" )' ) ) )
+  
+}
+
+spatial_grid( d.plot )
+
 
