@@ -209,6 +209,7 @@ dt.a <- as.data.table( no.na )
   out.npo.ppl[[i]] <- out.line.sf %>% 
     arrange( Case.Number ) %>%                                            # arrange data by NPO
     distinct( Case.Number, 
+              GEOID,
               bm, 
               lon.bm = !!rlang::parse_expr( paste0( "lon.BM.", bm.tails[i] ) ), 
               lat.bm = !!rlang::parse_expr( paste0( "lat.BM.", bm.tails[i] ) ),
@@ -238,16 +239,22 @@ d.f <- npo.ppl %>%
   group_by( Case.Number ) %>%
   mutate( avg.miles = mean( miles, na.rm = T ) )          # compute average miles to NPO within organizations
 
-# save
-setwd( paste0( lf, "/10-Spatial-Grid-Data" ) )
-saveRDS( d.f, "BM-NPO-Spatial-Grid.rds")
 
+# subset data to those only included in the 43 MSAs selected in the previous R script
+setwd( paste0( lf,"/Dashboard-MSA-Data/") )
+
+msas <- readRDS( "USA-MSAs.rds" )
+
+d.f.sub <- d.f[ which( d.f$GEOID %in% unique( msas$GEOID ) ), ]
+
+setwd( paste0( lf, "/10-Spatial-Grid-Data" ) )
+saveRDS( d.f.sub, "BM-NPO-Spatial-Grid.rds")
 
 
 # Example Spatial grid
-cn.lev <- levels( as.factor(d$Case.Number ) )
+cn.lev <- levels( as.factor(d.f.sub$Case.Number ) )
 
-(d.plot <- d.f %>% filter( Case.Number == cn.lev[110] ) %>%
+(d.plot <- d.f.sub %>% filter( Case.Number == cn.lev[110] ) %>%
     mutate( miles = round( miles, 2 ) ) )
 
 # alter boundary coordinates 
@@ -338,3 +345,9 @@ spatial_grid <- function( df ){
 spatial_grid( d.plot )
 
 
+cn.lev <- levels( as.factor(d$Case.Number ) )
+
+(d.plot <- d.f %>% filter( Case.Number == cn.lev[104] ) %>%
+    mutate( miles = round( miles, 2 ) ) )
+
+spatial_grid( d.plot )

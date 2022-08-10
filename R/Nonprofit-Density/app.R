@@ -54,6 +54,13 @@ setwd( paste0( lf,"/Dashboard-MSA-Data/Dorling-Shapefiles") )
 msas.dorling <- readRDS( "USA-MSAs-Dorling.rds" )
 
 
+## Boardmember/NPO Data Shapefile
+
+setwd( paste0( lf,"/10-Spatial-Grid-Data") )
+
+bm.npo <- readRDS( "BM-NPO-Spatial-Grid.rds" )
+
+
 ### Plotting Functions ###
 
 # landing page chloropleths
