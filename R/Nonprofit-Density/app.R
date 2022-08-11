@@ -67,11 +67,11 @@ bm.npo <- readRDS( "BM-NPO-Spatial-Grid.rds" )
 ui <- bootstrapPage(
   navbarPage(theme = shinytheme( "flatly" ), collapsible = TRUE,
              
-             HTML('<a style="text-decoration:none;cursor:default;color:#FFFFFF;" class="active" href="#">U.S. Nonprofit Density</a>'), 
+             HTML('<a style="text-decoration:none;cursor:default;color:#FFFFFF;" class="active" href="#">U.S. New Nonprofit Density, 2014-2021</a>'), 
              id="nav",
              
              ## Counties Tab
-             tabPanel("New Nonprofit Density, 2014-2021: U.S. Counties",
+             tabPanel("U.S. Counties",
                       div(class="outer",
                           tags$head(includeCSS("/Volumes/Chris-SSD/Urban Institute/Summer Projects/Geospatial Dashboard/np-density-dashboard/R/Nonprofit-Density/styles.css")),
                           
@@ -80,7 +80,7 @@ ui <- bootstrapPage(
                               span( div( img(src="output-onlineimagetools(2).png",
                                              height="45%", width="90%", align="center" ) ) ),
                               
-                              pickerInput( "yr_select", "Year:",   
+                              selectInput( "yr_select", "Year:",   
                                            choices = c("Cumulative: 2014-2021" = "cum", "2014", "2015", "2016", "2017", "2018", 
                                                        "2019", "2020", "2021" ), 
                                            selected = c("Cumulative: 2014-2021" ),
@@ -90,14 +90,14 @@ ui <- bootstrapPage(
                                             c( "Chloropleth" = "chloro",
                                                "Dorling Cartogram" = "dorling") ) ,
                               
-                              pickerInput( "metric", "Metric: ",   
+                              selectInput( "metric", "Metric: ",   
                                            choices = c( "Density" = "dens" ), 
                                            selected = c("Density" ),
                                            multiple = FALSE) ),
                             
                             mainPanel( plotOutput( "ptype" , width = "90%", height = 400 ),
                                        plotOutput( "lp.h.1" ,width = "90%", height = 200 ),
-                                       tableOutput( "lp.t.1" ) )
+                                       tableOutput( "lp.t.1" ) ) 
                             
                           )
                       )
@@ -113,7 +113,7 @@ ui <- bootstrapPage(
                               span( div( img(src="output-onlineimagetools(2).png",
                                              height="45%", width="90%", align="center" ) ) ),
                               
-                              pickerInput( "yr_select_msa", "Year:",   
+                              selectInput( "yr_select_msa", "Year:",   
                                            choices = c("Cumulative: 2014-2021" = "cum", "2014", "2015", "2016", "2017", "2018", 
                                                        "2019", "2020", "2021" ), 
                                            selected = c("Cumulative: 2014-2021" ),
@@ -123,12 +123,12 @@ ui <- bootstrapPage(
                                             c( "Chloropleth" = "chloro",
                                                "Dorling Cartogram" = "dorling") ) ,
                               
-                              pickerInput( "metric_msa", "Metric: ",   
+                              selectInput( "metric_msa", "Metric: ",   
                                            choices = c( "Density" = "dens" ), 
                                            selected = c("Density" ),
                                            multiple = FALSE),
                               
-                              pickerInput( "msa", "MSA: ",   
+                              selectInput( "msa", "MSA: ",   
                                            choices = c( "Atlanta-Sandy-Springs-Alpharetta", "Austin-Round-Rock-Georgetown", 
                                                         "Baltimore-Columbia-Towson", "Boston-Cambridge-Newton", 
                                                         "Charlotte-Concord-Gastonia", "Chicago-Naperville-Elgin", "Cincinnati", 
@@ -213,7 +213,7 @@ ui <- bootstrapPage(
                               span( div( img(src="output-onlineimagetools(2).png",
                                              height="45%", width="90%", align="center" ) ) ) ,
                               
-                              pickerInput( "yr_select", "Year:",   
+                              selectInput( "yr_select", "Year:",   
                                            choices = c("Cumulative: 2014-2021" = "cum", "2014", "2015", "2016", "2017", "2018", 
                                                        "2019", "2020", "2021" ), 
                                            selected = c("Cumulative: 2014-2021" ),
