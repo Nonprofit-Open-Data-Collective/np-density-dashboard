@@ -1,4 +1,3 @@
-
 library( shiny )
 library( tidyverse )
 library( plotly )
@@ -12,15 +11,15 @@ library( urbnthemes )
 library( leaflet )
 
 # import helper functions
-source('/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/np-density-dashboard/R/helpers.R')
-source('/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/np-density-dashboard/R/Nonprofit-Density/plotting-fcts.R')
+source('/Volumes/Chris-SSD/Urban Institute/Summer Projects/Geospatial Dashboard/np-density-dashboard/R/helpers.R')
+source('/Volumes/Chris-SSD/Urban Institute/Summer Projects/Geospatial Dashboard/np-density-dashboard/R/Nonprofit-Density/plotting-fcts.R')
 
 # Render png to jpeg
 
 # Import counties landing page map
-main <- "/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/"
+main <- "/Volumes/Chris-SSD/Urban Institute/Summer Projects/Geospatial Dashboard/"
 
-lf <- "/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/Large-Files-Bank"
+lf <- "/Volumes/Chris-SSD/Urban Institute/Summer Projects/Geospatial Dashboard/Large-Files-Bank"
 
 
 setwd( paste0( main, "np-density-dashboard/Data-Rodeo/Dashboard-County-Data/" ) )
@@ -74,7 +73,7 @@ ui <- bootstrapPage(
              ## Counties Tab
              tabPanel("New Nonprofit Density, 2014-2021: U.S. Counties",
                       div(class="outer",
-                          tags$head(includeCSS("/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/np-density-dashboard/R/Nonprofit-Density/styles.css")),
+                          tags$head(includeCSS("/Volumes/Chris-SSD/Urban Institute/Summer Projects/Geospatial Dashboard/np-density-dashboard/R/Nonprofit-Density/styles.css")),
                           
                           sidebarLayout(
                             sidebarPanel(
@@ -107,7 +106,7 @@ ui <- bootstrapPage(
              ## MSAs Tab
              tabPanel("Metropolitan Statistical Areas",
                       div(class="outer",
-                          tags$head(includeCSS("/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/np-density-dashboard/R/Nonprofit-Density/styles.css")),
+                          tags$head(includeCSS("/Volumes/Chris-SSD/Urban Institute/Summer Projects/Geospatial Dashboard/np-density-dashboard/R/Nonprofit-Density/styles.css")),
                           
                           sidebarLayout(
                             sidebarPanel(
@@ -128,28 +127,28 @@ ui <- bootstrapPage(
                                            choices = c( "Density" = "dens" ), 
                                            selected = c("Density" ),
                                            multiple = FALSE),
-                            
-                            pickerInput( "msa", "MSA: ",   
-                                         choices = c( "Atlanta-Sandy-Springs-Alpharetta", "Austin-Round-Rock-Georgetown", 
-                                                      "Baltimore-Columbia-Towson", "Boston-Cambridge-Newton", 
-                                                      "Charlotte-Concord-Gastonia", "Chicago-Naperville-Elgin", "Cincinnati", 
-                                                      "Cleveland-Elyria", "Columbus", "Dallas-Fort-Worth-Arlington", "Denver-Aurora-Lakewood", 
-                                                      "Detroit-Warren-Dearborn", "Houston-The-Woodlands-Sugar-Land", 
-                                                      "Indianapolis-Carmel-Anderson", "Jacksonville", "Kansas-City", 
-                                                      "Las-Vegas-Henderson-Paradise", "Los-Angeles-Long-Beach-Anaheim", 
-                                                      "Miami-Fort-Lauderdale-Pompano-Beach", "Milwaukee-Waukesha", 
-                                                      "Minneapolis-St-Paul-Bloomington", "Nashville-Davidson--Murfreesboro--Franklin", 
-                                                      "New-York-Newark-Jersey-City", "Oklahoma-City", "Orlando-Kissimmee-Sanford", 
-                                                      "Philadelphia-Camden-Wilmington", "Phoenix-Mesa-Chandler", "Pittsburgh", 
-                                                      "Portland-Vancouver-Hillsboro", "Providence-Warwick", "Raleigh-Cary", 
-                                                      "Riverside-San-Bernardino-Ontario", "Sacramento-Roseville-Folsom", 
-                                                      "San-Antonio-New-Braunfels", "San-Diego-Chula-Vista-Carlsbad", 
-                                                      "San-Francisco-Oakland-Berkeley", "San-Jose-Sunnyvale-Santa-Clara", 
-                                                      "San-Juan-Bayamón-Caguas", "Seattle-Tacoma-Bellevue", "St-Louis", 
-                                                      "Tampa-St-Petersburg-Clearwater", "Virginia-Beach-Norfolk-Newport-News", 
-                                                      "Washington-Arlington-Alexandria" ), 
-                                         selected = c( "Washington-Arlington-Alexandria" ),
-                                         multiple = FALSE) ),
+                              
+                              pickerInput( "msa", "MSA: ",   
+                                           choices = c( "Atlanta-Sandy-Springs-Alpharetta", "Austin-Round-Rock-Georgetown", 
+                                                        "Baltimore-Columbia-Towson", "Boston-Cambridge-Newton", 
+                                                        "Charlotte-Concord-Gastonia", "Chicago-Naperville-Elgin", "Cincinnati", 
+                                                        "Cleveland-Elyria", "Columbus", "Dallas-Fort-Worth-Arlington", "Denver-Aurora-Lakewood", 
+                                                        "Detroit-Warren-Dearborn", "Houston-The-Woodlands-Sugar-Land", 
+                                                        "Indianapolis-Carmel-Anderson", "Jacksonville", "Kansas-City", 
+                                                        "Las-Vegas-Henderson-Paradise", "Los-Angeles-Long-Beach-Anaheim", 
+                                                        "Miami-Fort-Lauderdale-Pompano-Beach", "Milwaukee-Waukesha", 
+                                                        "Minneapolis-St-Paul-Bloomington", "Nashville-Davidson--Murfreesboro--Franklin", 
+                                                        "New-York-Newark-Jersey-City", "Oklahoma-City", "Orlando-Kissimmee-Sanford", 
+                                                        "Philadelphia-Camden-Wilmington", "Phoenix-Mesa-Chandler", "Pittsburgh", 
+                                                        "Portland-Vancouver-Hillsboro", "Providence-Warwick", "Raleigh-Cary", 
+                                                        "Riverside-San-Bernardino-Ontario", "Sacramento-Roseville-Folsom", 
+                                                        "San-Antonio-New-Braunfels", "San-Diego-Chula-Vista-Carlsbad", 
+                                                        "San-Francisco-Oakland-Berkeley", "San-Jose-Sunnyvale-Santa-Clara", 
+                                                        "San-Juan-Bayamón-Caguas", "Seattle-Tacoma-Bellevue", "St-Louis", 
+                                                        "Tampa-St-Petersburg-Clearwater", "Virginia-Beach-Norfolk-Newport-News", 
+                                                        "Washington-Arlington-Alexandria" ), 
+                                           selected = c( "Washington-Arlington-Alexandria" ),
+                                           multiple = FALSE) ),
                             
                             mainPanel( plotOutput( "ptype.msa" , width = "90%", height = 360),
                                        plotOutput( "lp.h.1.msa" ,width = "90%", height = 170),
@@ -157,24 +156,68 @@ ui <- bootstrapPage(
                             
                           )
                       )
-                      ),
+             ),
              
+             ## Boardmember/NPO Tab
+             tabPanel("Boardmember Distances",
+                      div(class="outer",
+                          tags$head(includeCSS("/Volumes/Chris-SSD/Urban Institute/Summer Projects/Geospatial Dashboard/np-density-dashboard/R/Nonprofit-Density/styles.css")),
+                          
+                          sidebarLayout(
+                            sidebarPanel(
+                              span( div( img( src = "output-onlineimagetools(2).png",
+                                              height="45%", width="90%", align="center" ) ) ),
+                              
+                              
+                              
+                              
+                              selectInput( "msa_bm", "MSA: ",   
+                                           choices = c( "Atlanta-Sandy-Springs-Alpharetta", "Austin-Round-Rock-Georgetown", 
+                                                        "Baltimore-Columbia-Towson", "Boston-Cambridge-Newton", 
+                                                        "Charlotte-Concord-Gastonia", "Chicago-Naperville-Elgin", "Cincinnati", 
+                                                        "Cleveland-Elyria", "Columbus", "Dallas-Fort-Worth-Arlington", "Denver-Aurora-Lakewood", 
+                                                        "Detroit-Warren-Dearborn", "Houston-The-Woodlands-Sugar-Land", 
+                                                        "Indianapolis-Carmel-Anderson", "Jacksonville", "Kansas-City", 
+                                                        "Las-Vegas-Henderson-Paradise", "Los-Angeles-Long-Beach-Anaheim", 
+                                                        "Miami-Fort-Lauderdale-Pompano-Beach", "Milwaukee-Waukesha", 
+                                                        "Minneapolis-St-Paul-Bloomington", "Nashville-Davidson--Murfreesboro--Franklin", 
+                                                        "New-York-Newark-Jersey-City", "Oklahoma-City", "Orlando-Kissimmee-Sanford", 
+                                                        "Philadelphia-Camden-Wilmington", "Phoenix-Mesa-Chandler", "Pittsburgh", 
+                                                        "Portland-Vancouver-Hillsboro", "Providence-Warwick", "Raleigh-Cary", 
+                                                        "Riverside-San-Bernardino-Ontario", "Sacramento-Roseville-Folsom", 
+                                                        "San-Antonio-New-Braunfels", "San-Diego-Chula-Vista-Carlsbad", 
+                                                        "San-Francisco-Oakland-Berkeley", "San-Jose-Sunnyvale-Santa-Clara", 
+                                                        "San-Juan-Bayamón-Caguas", "Seattle-Tacoma-Bellevue", "St-Louis", 
+                                                        "Tampa-St-Petersburg-Clearwater", "Virginia-Beach-Norfolk-Newport-News", 
+                                                        "Washington-Arlington-Alexandria" ), 
+                                           selected = c( "Washington-Arlington-Alexandria" ),
+                                           multiple = FALSE),
+                              
+                              uiOutput("conditional_select") ),
+                            
+                            mainPanel( fluidRow( column( width = 6, align = "center",
+                                          plotOutput( "sp.gr" ) ) )
+                            )
+                            
+                          )
+                      )
+             ),
              
              ## Leaflet Tab
              tabPanel("Interactive Leaflet Map",
                       div(class="outer",
-                          tags$head(includeCSS("/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/np-density-dashboard/R/Nonprofit-Density/styles.css")),
+                          tags$head(includeCSS("/Volumes/Chris-SSD/Urban Institute/Summer Projects/Geospatial Dashboard/np-density-dashboard/R/Nonprofit-Density/styles.css")),
                           
                           sidebarLayout(
                             sidebarPanel(
                               span( div( img(src="output-onlineimagetools(2).png",
                                              height="45%", width="90%", align="center" ) ) ) ,
-                            
-                            pickerInput( "yr_select", "Year:",   
-                                         choices = c("Cumulative: 2014-2021" = "cum", "2014", "2015", "2016", "2017", "2018", 
-                                                     "2019", "2020", "2021" ), 
-                                         selected = c("Cumulative: 2014-2021" ),
-                                         multiple = FALSE) ),
+                              
+                              pickerInput( "yr_select", "Year:",   
+                                           choices = c("Cumulative: 2014-2021" = "cum", "2014", "2015", "2016", "2017", "2018", 
+                                                       "2019", "2020", "2021" ), 
+                                           selected = c("Cumulative: 2014-2021" ),
+                                           multiple = FALSE) ),
                             
                             mainPanel( leafletOutput( "lp.l.1" ) )
                             
@@ -190,18 +233,27 @@ ui <- bootstrapPage(
 # SERVER
 server <- function( input, output ) { 
   
+  ## dependent inputs for boardmember/NPO spatial grids
+  output$conditional_select <- renderUI({
+    selectInput("npo_options", "Non-Profit Organization:", 
+                choices = c(unique( as.character( data.frame( bm.npo )[ which( bm.npo$MSA == input$msa_bm ), "ORGNAME" ] ) ) ) )
+  })
+  
 
+  
+
+  
   ## data filtering reactive (by year)
   
   # counties dataset
   data_reactive <- reactive(
     {
-    
+      
       if ( input$ptype =="dorling" ) 
-        { filter( cnties.dorling, year ==  input$yr_select ) }
+      { filter( cnties.dorling, year ==  input$yr_select ) }
       else if ( input$ptype=="chloro" ) 
       { filter( cnties, year == input$yr_select ) }
-      }
+    }
   )
   
   # MSAs dataset
@@ -215,10 +267,10 @@ server <- function( input, output ) {
     }
   )
   
-  
+
   ### Rendering ###
   
- ## County Maps
+  ## County Maps
   
   # Radio button for plot type
   output$ptype <- renderPlot( {
@@ -256,7 +308,12 @@ server <- function( input, output ) {
   
   # tables
   output$lp.t.1.msa <- renderTable( lp.tbl( df=data_reactive_msa(), input = input$metric_msa ) )
- 
+  
+  # spatial grids
+  output$sp.gr <- renderPlot( spatial_grid( bm.npo %>% filter( MSA == input$msa_bm & ORGNAME == input$npo_options) ) )
 }
+
+# spatial grids
+
 
 shinyApp( ui, server )

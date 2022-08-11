@@ -95,7 +95,7 @@ spatial_grid <- function( df ){
     assign( paste0( "bm.label.lat.", i ), df.df[ i, "lat.bm"] )
     
     # labels
-    assign( paste0( "bm.label.mile.", i ), paste0( df.df[ i, "miles"] ) )
+    assign( paste0( "bm.label.mile.", i ), paste0( round( df.df[ i, "miles"], 2 ), "miles" ) )
     
     # annotations in ggplot to write labels
     ann.list[[i]] <- paste0( "annotate( 'text', bm.label.lon.", i , ", bm.label.lat.", i , ", label = bm.label.mile.", i,", size = 2.5, vjust = 2, family = 'Avenir' ) +" )

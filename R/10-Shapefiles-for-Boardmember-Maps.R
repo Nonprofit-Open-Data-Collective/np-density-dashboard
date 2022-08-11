@@ -21,10 +21,10 @@ library( geosphere )
 library( data.table )       # for manipulating data for plotting BM to NPO
 library( rlang )
 
-source('/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/np-density-dashboard/R/helpers.R')
+source('/Volumes/Chris-SSD/Urban Institute/Summer Projects/Geospatial Dashboard/np-density-dashboard/R/helpers.R')
 
 
-lf <- "/Volumes/My Passport for Mac/Urban Institute/Summer Projects/Geospatial Dashboard/Large-Files-Bank"
+lf <- "/Volumes/Chris-SSD/Urban Institute/Summer Projects/Geospatial Dashboard/Large-Files-Bank"
 
 setwd( lf )
 
@@ -247,11 +247,15 @@ msas <- readRDS( "USA-MSAs.rds" )
 
 d.f.sub <- d.f[ which( d.f$GEOID %in% unique( msas$GEOID ) ), ]
 
+# add MSA identifier column
+d.f.sub.msa <- st_as_sf( left_join( data.frame( d.f.sub ), data.frame( msas )[, c( "GEOID", "MSA" ) ] %>% distinct() ) )
+
 setwd( paste0( lf, "/10-Spatial-Grid-Data" ) )
-saveRDS( d.f.sub, "BM-NPO-Spatial-Grid.rds")
+saveRDS( d.f.sub.msa, "BM-NPO-Spatial-Grid.rds")
 
 
-# Example Spatial grid
+
+### Example Spatial grid ###
 cn.lev <- levels( as.factor(d.f.sub$Case.Number ) )
 
 (d.plot <- d.f.sub %>% filter( Case.Number == cn.lev[110] ) %>%
