@@ -95,7 +95,8 @@ ui <- bootstrapPage(
                                            selected = c("Density" ),
                                            multiple = FALSE) ),
                             
-                            mainPanel( plotOutput( "ptype" , width = "90%", height = 400 ),
+                            mainPanel( tags$div(
+                              style="margin-top:15px;", plotOutput( "ptype" , width = "90%", height = 400 ) ),
                                        plotOutput( "lp.h.1" ,width = "90%", height = 200 ),
                                        tableOutput( "lp.t.1" ) ) 
                             
@@ -150,7 +151,8 @@ ui <- bootstrapPage(
                                            selected = c( "Washington-Arlington-Alexandria" ),
                                            multiple = FALSE) ),
                             
-                            mainPanel( plotOutput( "ptype.msa" , width = "90%", height = 360),
+                            mainPanel( tags$div(
+                              style="margin-top:70px;", plotOutput( "ptype.msa" , width = "90%", height = 360) ),
                                        plotOutput( "lp.h.1.msa" ,width = "90%", height = 170),
                                        fluidRow( tableOutput( "lp.t.1.msa" ) ) )
                             
@@ -195,8 +197,10 @@ ui <- bootstrapPage(
                               
                               uiOutput("conditional_select") ),
                             
-                            mainPanel( fluidRow( column( width = 6, align = "center",
-                                          plotOutput( "sp.gr" ) ) )
+                            mainPanel( tags$div(
+                              style="margin-top:150px;
+                              margin-right:150px;",
+                                          plotOutput( "sp.gr" ) )
                             )
                             
                           )

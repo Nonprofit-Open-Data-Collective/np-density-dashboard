@@ -103,6 +103,7 @@ spatial_grid <- function( df ){
     
   }
   
+  options(repr.plot.width =9, repr.plot.height =9)
   
   eval( parse( text = paste0( 'ggplot( df ) +
     geom_sf( lwd = 0.3, lineend = "round" ) +
